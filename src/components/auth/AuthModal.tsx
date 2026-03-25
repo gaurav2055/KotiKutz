@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Modal from "@/components/ui/Modal";
 import DarkInput from "@/components/ui/DarkInput";
+import { supabase } from "@/lib/supabase";
 
 export type AuthMode = "login" | "signup";
 
@@ -24,16 +25,98 @@ function GoogleIcon() {
 
 export default function AuthModal({ onClose, defaultMode = "login" }: Props) {
   const [mode, setMode] = useState<AuthMode>(defaultMode);
-  const [form, setForm] = useState({ name: "", email: "", password: "", phone: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", confirmPassword: "", phone: "" });
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
 
   function set(field: string, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
+    setError(null);
   }
 
+  const passwordRules = [
+    { label: "At least 8 characters",  met: form.password.length >= 8 },
+    { label: "One uppercase letter",   met: /[A-Z]/.test(form.password) },
+    { label: "One lowercase letter",   met: /[a-z]/.test(form.password) },
+    { label: "One number",             met: /[0-9]/.test(form.password) },
+    { label: "One special character",  met: /[^A-Za-z0-9]/.test(form.password) },
+  ];
+  const passwordValid = passwordRules.every((r) => r.met);
+
   const canSubmit =
+    !loading &&
     form.email !== "" &&
     form.password !== "" &&
-    (mode === "login" || form.name !== "");
+    (mode === "login" || (
+      form.name !== "" &&
+      passwordValid &&
+      form.password === form.confirmPassword
+    ));
+
+  async function handleSubmit() {
+    setLoading(true);
+    setError(null);
+    if (mode === "signup" && form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      setLoading(false);
+      return;
+    }
+    if (mode === "login") {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: form.email,
+        password: form.password,
+      });
+      if (error) { setError(error.message); setLoading(false); return; }
+    } else {
+      const { error } = await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+        options: {
+          data: { full_name: form.name, phone: form.phone },
+        },
+      });
+      if (error) { setError(error.message); setLoading(false); return; }
+      setLoading(false);
+      setEmailSent(true);
+      return;
+    }
+    setLoading(false);
+    onClose();
+  }
+
+  async function handleGoogle() {
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/` },
+    });
+  }
+
+  if (emailSent) {
+    return (
+      <Modal theme="dark" width="w-[420px]" onClose={onClose}>
+        <div className="flex flex-col items-center text-center py-4 gap-4">
+          <div className="w-16 h-16 rounded-full bg-brand-green/10 flex items-center justify-center">
+            <svg className="w-8 h-8 text-brand-green" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25H4.5a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5H4.5a2.25 2.25 0 00-2.25 2.25m19.5 0l-9.75 7.5-9.75-7.5" />
+            </svg>
+          </div>
+          <h2 className="text-xl font-bold text-[#f3f4f6]">Check your email</h2>
+          <p className="text-sm text-gray-400 leading-relaxed">
+            We sent a confirmation link to <span className="text-white font-medium">{form.email}</span>.<br />
+            Click the link in that email to activate your account.
+          </p>
+          <p className="text-xs text-gray-600">Didn&apos;t receive it? Check your spam folder.</p>
+          <button
+            onClick={onClose}
+            className="mt-2 w-full h-11 bg-brand-green text-black text-sm font-semibold rounded-xl hover:opacity-80 transition-opacity cursor-pointer"
+          >
+            Got it
+          </button>
+        </div>
+      </Modal>
+    );
+  }
 
   return (
     <Modal theme="dark" width="w-[420px]" onClose={onClose}>
@@ -66,7 +149,10 @@ export default function AuthModal({ onClose, defaultMode = "login" }: Props) {
       </div>
 
       {/* Google OAuth */}
-      <button className="w-full flex items-center justify-center gap-3 h-11 bg-white text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-100 transition-colors mb-4 cursor-pointer">
+      <button
+        onClick={handleGoogle}
+        className="w-full flex items-center justify-center gap-3 h-11 bg-white text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-100 transition-colors mb-4 cursor-pointer"
+      >
         <GoogleIcon />
         Continue with Google
       </button>
@@ -81,12 +167,30 @@ export default function AuthModal({ onClose, defaultMode = "login" }: Props) {
       {/* Form fields */}
       <div className="space-y-3">
         {mode === "signup" && (
-          <DarkInput placeholder="Full Name" value={form.name} onChange={(v) => set("name", v)} />
+          <DarkInput label="Full Name" placeholder="John Doe" value={form.name} onChange={(v) => set("name", v)} name="name" autoComplete="name" />
         )}
-        <DarkInput placeholder="Email"    value={form.email}    onChange={(v) => set("email", v)}    type="email"    />
-        <DarkInput placeholder="Password" value={form.password} onChange={(v) => set("password", v)} type="password" />
+        <DarkInput label="Email" placeholder="you@example.com" value={form.email} onChange={(v) => set("email", v)} type="email" name="email" autoComplete="email" />
+        <DarkInput label="Password" placeholder="••••••••" value={form.password} onChange={(v) => set("password", v)} type="password" name="password" autoComplete={mode === "login" ? "current-password" : "new-password"} />
+        {mode === "signup" && form.password !== "" && (
+          <ul className="space-y-1 px-1">
+            {passwordRules.map((rule) => (
+              <li key={rule.label} className={`flex items-center gap-2 text-xs ${rule.met ? "text-brand-green" : "text-gray-500"}`}>
+                <span>{rule.met ? "✓" : "○"}</span>
+                {rule.label}
+              </li>
+            ))}
+          </ul>
+        )}
         {mode === "signup" && (
-          <DarkInput placeholder="Phone Number (optional)" value={form.phone} onChange={(v) => set("phone", v)} type="tel" />
+          <>
+            <div>
+              <DarkInput label="Confirm Password" placeholder="••••••••" value={form.confirmPassword} onChange={(v) => set("confirmPassword", v)} type="password" name="confirmPassword" autoComplete="new-password" />
+              {form.confirmPassword !== "" && form.password !== form.confirmPassword && (
+                <p className="text-red-400 text-xs mt-1 px-1">Passwords do not match.</p>
+              )}
+            </div>
+            <DarkInput label="Phone Number (optional)" placeholder="+91 98765 43210" value={form.phone} onChange={(v) => set("phone", v)} type="tel" name="phone" autoComplete="tel" />
+          </>
         )}
       </div>
 
@@ -99,12 +203,18 @@ export default function AuthModal({ onClose, defaultMode = "login" }: Props) {
         </div>
       )}
 
+      {/* Error */}
+      {error && (
+        <p className="text-red-400 text-xs mt-3 text-center">{error}</p>
+      )}
+
       {/* Submit */}
       <button
+        onClick={handleSubmit}
         disabled={!canSubmit}
         className="w-full h-11 bg-brand-green text-black text-sm font-semibold rounded-xl mt-5 hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
       >
-        {mode === "login" ? "Log In" : "Create Account"}
+        {loading ? "Please wait…" : mode === "login" ? "Log In" : "Create Account"}
       </button>
 
       {/* Switch mode */}
