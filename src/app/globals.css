@@ -1,26 +1,50 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────
+   BRAND COLORS
+   Define your colors here as CSS variables.
+   To change a color across the whole site,
+   just update it in this one place.
+───────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --brand-green:   #00ff2a;
+  --brand-dark:    #0a0a0a;
+  --brand-blue:    #0c8ce9;
+  --offers-bg:     #e2e2e2;
+  --services-bg:   #d9d9d9;
+}
+
+/* ─────────────────────────────────────────────
+   TAILWIND THEME
+   This tells Tailwind to create utility classes
+   from the CSS variables above.
+   e.g. --color-brand-green → bg-brand-green,
+                               text-brand-green,
+                               border-brand-green
+───────────────────────────────────────────── */
+/* ─────────────────────────────────────────────
+   FONTS
+   Algerian is a Windows system font used for
+   display headings (PageHeader, section titles).
+   For deployment, add the font file to /public/fonts/
+   and replace the @font-face src below.
+───────────────────────────────────────────── */
+@font-face {
+  font-family: 'Algerian';
+  src: local('Algerian');
+  font-display: swap;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-brand-green:  var(--brand-green);
+  --color-brand-dark:   var(--brand-dark);
+  --color-brand-blue:   var(--brand-blue);
+  --color-offers-bg:    var(--offers-bg);
+  --color-services-bg:  var(--services-bg);
+  --font-algerian: 'Algerian', serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: #ffffff;
+  color: #171717;
 }
