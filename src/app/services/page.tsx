@@ -1,27 +1,20 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import SiteHero from "@/components/SiteHero";
 import ServicesSidebar from "@/components/services/ServicesSidebar";
 import ServiceGridCard from "@/components/ServiceGridCard";
+import { supabase } from "@/lib/supabase";
 
-// TODO: Replace with backend API data
-const SERVICE_IMAGE = "/images/Services/default-service-image.jpg";
-
-const ALL_SERVICES = [
-  { id: 1,  name: "Haircut",            price: "₹299",  category: "Hair",  gender: "Men",   description: "Classic haircut tailored to your style.",            image: SERVICE_IMAGE },
-  { id: 2,  name: "Beard Trim",         price: "₹149",  category: "Beard", gender: "Men",   description: "Sharp beard shaping and trimming.",                   image: SERVICE_IMAGE },
-  { id: 3,  name: "Hair Color",         price: "₹599",  category: "Hair",  gender: "All",   description: "Professional hair coloring service.",                 image: SERVICE_IMAGE },
-  { id: 4,  name: "Hot Shave",          price: "₹199",  category: "Beard", gender: "Men",   description: "Traditional hot towel straight razor shave.",         image: SERVICE_IMAGE },
-  { id: 5,  name: "Facial",            price: "₹399",  category: "Skin",  gender: "All",   description: "Refreshing facial treatment.",                        image: SERVICE_IMAGE },
-  { id: 6,  name: "Hair Wash",          price: "₹99",   category: "Hair",  gender: "All",   description: "Thorough hair wash with conditioning.",               image: SERVICE_IMAGE },
-  { id: 7,  name: "Kids Haircut",       price: "₹199",  category: "Hair",  gender: "Kids",  description: "Fun and gentle haircut for kids.",                    image: SERVICE_IMAGE },
-  { id: 8,  name: "Eyebrow Threading", price: "₹49",   category: "Skin",  gender: "All",   description: "Clean and precise eyebrow shaping.",                  image: SERVICE_IMAGE },
-  { id: 9,  name: "Head Massage",       price: "₹249",  category: "Hair",  gender: "All",   description: "Relaxing oil head massage.",                          image: SERVICE_IMAGE },
-  { id: 10, name: "De-tan",            price: "₹349",  category: "Skin",  gender: "All",   description: "Skin de-tanning treatment.",                          image: SERVICE_IMAGE },
-  { id: 11, name: "Shampoo + Blow Dry",price: "₹199",  category: "Hair",  gender: "All",   description: "Professional shampoo and styling.",                   image: SERVICE_IMAGE },
-  { id: 12, name: "Pedicure",          price: "₹499",  category: "Skin",  gender: "All",   description: "Relaxing foot care treatment.",                       image: SERVICE_IMAGE },
-];
+type Service = {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  gender: string;
+  description: string;
+  image_url: string;
+};
 
 export type FiltersState = {
   search: string;
@@ -31,6 +24,7 @@ export type FiltersState = {
 };
 
 export default function ServicesPage() {
+  const [allServices, setAllServices] = useState<Service[]>([]);
   const [filters, setFilters] = useState<FiltersState>({
     search: "",
     location: "",
@@ -38,14 +32,21 @@ export default function ServicesPage() {
     categories: [],
   });
 
+  useEffect(() => {
+    supabase
+      .from("services")
+      .select("id, name, price, category, gender, description, image_url")
+      .then(({ data }) => { if (data) setAllServices(data); });
+  }, []);
+
   const filtered = useMemo(() => {
-    return ALL_SERVICES.filter((s) => {
+    return allServices.filter((s) => {
       if (filters.search && !s.name.toLowerCase().includes(filters.search.toLowerCase())) return false;
       if (filters.gender && s.gender !== "All" && s.gender !== filters.gender) return false;
       if (filters.categories.length > 0 && !filters.categories.includes(s.category)) return false;
       return true;
     });
-  }, [filters]);
+  }, [filters, allServices]);
 
   return (
     <main>
@@ -60,7 +61,13 @@ export default function ServicesPage() {
           ) : (
             <div className="grid grid-cols-3 gap-6">
               {filtered.map((service) => (
-                <ServiceGridCard key={service.id} {...service} />
+                <ServiceGridCard
+                  key={service.id}
+                  name={service.name}
+                  price={`₹${service.price}`}
+                  description={service.description}
+                  image={service.image_url}
+                />
               ))}
             </div>
           )}

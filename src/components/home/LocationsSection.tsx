@@ -1,14 +1,26 @@
-import LocationCard from "@/components/LocationCard";
+"use client";
 
-const LOCATIONS = [
-  { name: "Porwal Road",     address: "Address: Lorem ipsum dolor sit amet consectetur. Urna ac nunc blandit integer eget.", image: "/images/Locations/porwal-road.jpg"   },
-  { name: "Viman Nagar",     address: "Address: Lorem ipsum dolor sit amet consectetur. Urna ac nunc blandit integer eget.", image: "/images/Locations/Viman-Nagar.jpg"    },
-  { name: "Dhanori",         address: "Address: Lorem ipsum dolor sit amet consectetur. Urna ac nunc blandit integer eget.", image: "/images/Locations/Dhanori.jpg"        },
-  { name: "Lohegaon",        address: "Address: Lorem ipsum dolor sit amet consectetur. Urna ac nunc blandit integer eget.", image: "/images/Locations/Lohegaon.jpg"       },
-  { name: "Dahisar, Mumbai", address: "Address: Lorem ipsum dolor sit amet consectetur. Urna ac nunc blandit integer eget.", image: "/images/Locations/Dahisar-Mumbai.jpg" },
-];
+import { useEffect, useState } from "react";
+import LocationCard from "@/components/LocationCard";
+import { supabase } from "@/lib/supabase";
+
+type Location = {
+  id: string;
+  name: string;
+  address: string;
+  image_url: string;
+};
 
 export default function LocationsSection() {
+  const [locations, setLocations] = useState<Location[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("locations")
+      .select("id, name, address, image_url")
+      .then(({ data }) => { if (data) setLocations(data); });
+  }, []);
+
   return (
     <section className="py-16 max-w-[1331px] mx-auto px-8">
       <div className="grid grid-cols-4 gap-4">
@@ -22,13 +34,13 @@ export default function LocationsSection() {
         </div>
 
         {/* Top row — first 3 location photos */}
-        {LOCATIONS.slice(0, 3).map((location) => (
-          <LocationCard key={location.name} {...location} />
+        {locations.slice(0, 3).map((location) => (
+          <LocationCard key={location.id} name={location.name} address={location.address} image={location.image_url} />
         ))}
 
-        {/* Bottom row — last 2 location photos (remaining 2 cells stay empty) */}
-        {LOCATIONS.slice(3).map((location) => (
-          <LocationCard key={location.name} {...location} />
+        {/* Bottom row — last 2 location photos */}
+        {locations.slice(3).map((location) => (
+          <LocationCard key={location.id} name={location.name} address={location.address} image={location.image_url} />
         ))}
 
       </div>

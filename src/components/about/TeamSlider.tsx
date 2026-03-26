@@ -1,29 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import TeamMemberCard from "@/components/about/TeamMemberCard";
+import { supabase } from "@/lib/supabase";
 
-// TODO: Replace with real team data from backend
-const PLACEHOLDER_IMAGE = "/images/Team/Default-Team-member.jpg";
-
-const TEAM_MEMBERS = [
-  { id: 1, name: "FName LName", location: "Viman Nagar",     specialization: "Haircuts & Styling", image: PLACEHOLDER_IMAGE },
-  { id: 2, name: "FName LName", location: "Porwal Road",     specialization: "Beard & Shaving",    image: PLACEHOLDER_IMAGE },
-  { id: 3, name: "FName LName", location: "Dhanori",         specialization: "Hair Coloring",       image: PLACEHOLDER_IMAGE },
-  { id: 4, name: "FName LName", location: "Lohegaon",        specialization: "Skincare",            image: PLACEHOLDER_IMAGE },
-  { id: 5, name: "FName LName", location: "Dahisar, Mumbai", specialization: "Massage",             image: PLACEHOLDER_IMAGE },
-];
+type StaffMember = {
+  id: string;
+  name: string;
+  specialization: string;
+  image_url: string;
+  locations: { name: string }[] | null;
+};
 
 const CARDS_VISIBLE = 3;
 
 export default function TeamSlider() {
+  const [members, setMembers] = useState<StaffMember[]>([]);
   const [startIndex, setStartIndex] = useState(0);
 
-  const canGoPrev = startIndex > 0;
-  const canGoNext = startIndex + CARDS_VISIBLE < TEAM_MEMBERS.length;
+  useEffect(() => {
+    supabase
+      .from("staff")
+      .select("id, name, specialization, image_url, locations(name)")
+      .then(({ data }) => { if (data) setMembers(data as StaffMember[]); });
+  }, []);
 
-  const visible = TEAM_MEMBERS.slice(startIndex, startIndex + CARDS_VISIBLE);
+  const canGoPrev = startIndex > 0;
+  const canGoNext = startIndex + CARDS_VISIBLE < members.length;
+  const visible = members.slice(startIndex, startIndex + CARDS_VISIBLE);
 
   return (
     <section className="py-16">
@@ -42,7 +47,13 @@ export default function TeamSlider() {
 
         <div className="flex gap-14">
           {visible.map((member) => (
-            <TeamMemberCard key={member.id} {...member} />
+            <TeamMemberCard
+              key={member.id}
+              name={member.name}
+              specialization={member.specialization}
+              image={member.image_url}
+              location={member.locations?.[0]?.name ?? ""}
+            />
           ))}
         </div>
 
