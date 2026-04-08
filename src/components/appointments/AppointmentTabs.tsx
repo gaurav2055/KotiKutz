@@ -1,6 +1,6 @@
 "use client";
 
-export type AppointmentTab = "upcoming" | "past" | "cancelled";
+export type AppointmentTab = "upcoming" | "past" | "missed" | "cancelled";
 
 type Props = {
   active: AppointmentTab;
@@ -11,6 +11,7 @@ type Props = {
 const TABS: { key: AppointmentTab; label: string }[] = [
   { key: "upcoming",  label: "Upcoming"  },
   { key: "past",      label: "Past"      },
+  { key: "missed",    label: "Missed"    },
   { key: "cancelled", label: "Cancelled" },
 ];
 
