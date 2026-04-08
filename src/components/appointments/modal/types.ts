@@ -1,5 +1,5 @@
 export type SelectedService = {
-  id: number;
+  id: string;
   name: string;
   price: number;
   duration: string;
@@ -10,10 +10,12 @@ export type BookingForm = {
   name: string;
   email: string;
   phone: string;
-  location: string;
+  location: string;     // display name
+  locationId: string;   // UUID for DB
   gender: "Male" | "Female";
   services: SelectedService[];
   date: string;
-  stylist: string;
+  staffId: string;      // UUID or "" for any available
+  staffName: string;    // display name
   timeSlot: string;
 };

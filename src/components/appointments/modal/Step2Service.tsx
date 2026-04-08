@@ -1,44 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Plus, Minus, ChevronDown, ChevronUp } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import type { SelectedService } from "./types";
 
-const SERVICE_CATALOG = [
-  {
-    category: "HAIR",
-    items: [
-      { id: 1,  name: "Regular Hair Cut",             duration: "~30 min", price: 350  },
-      { id: 2,  name: "Hair Cut + Beard",              duration: "~50 min", price: 550  },
-      { id: 3,  name: "Hair Cut + Beard + Spa",        duration: "~90 min", price: 990  },
-      { id: 6,  name: "Hair Colour",                   duration: "~60 min", price: 800  },
-      { id: 7,  name: "Hair Spa Treatment",            duration: "~45 min", price: 600  },
-    ],
-  },
-  {
-    category: "BEARD",
-    items: [
-      { id: 4,  name: "Beard Styling",                 duration: "~20 min", price: 250  },
-      { id: 5,  name: "Beard Trim",                    duration: "~15 min", price: 150  },
-      { id: 8,  name: "Beard Colour",                  duration: "~30 min", price: 400  },
-    ],
-  },
-  {
-    category: "SKIN",
-    items: [
-      { id: 9,  name: "Face Cleanup",                  duration: "~30 min", price: 500  },
-      { id: 10, name: "D-Tan",                          duration: "~40 min", price: 600  },
-      { id: 11, name: "Hydra Facial",                  duration: "~60 min", price: 1200 },
-    ],
-  },
-  {
-    category: "COMBO",
-    items: [
-      { id: 12, name: "Hair + Beard + D-Tan",          duration: "~80 min", price: 1100 },
-      { id: 13, name: "Hair + Beard + Hydra Facial",   duration: "~120 min", price: 1800 },
-    ],
-  },
-];
+type ServiceRow = {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+};
+
+type ServiceGroup = {
+  category: string;
+  items: ServiceRow[];
+};
 
 type Props = {
   selectedServices: SelectedService[];
@@ -49,8 +26,23 @@ type Props = {
 };
 
 export default function Step2Service({ selectedServices, onUpdate, onBack, onCancel, onNext }: Props) {
-  // All categories open by default
+  const [groups, setGroups] = useState<ServiceGroup[]>([]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    supabase
+      .from("services")
+      .select("id, name, price, category")
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, ServiceRow[]> = {};
+        data.forEach((s) => {
+          if (!map[s.category]) map[s.category] = [];
+          map[s.category].push(s);
+        });
+        setGroups(Object.entries(map).map(([category, items]) => ({ category, items })));
+      });
+  }, []);
 
   function toggleCategory(cat: string) {
     setCollapsed((prev) => {
@@ -61,15 +53,15 @@ export default function Step2Service({ selectedServices, onUpdate, onBack, onCan
     });
   }
 
-  function isSelected(id: number) {
+  function isSelected(id: string) {
     return selectedServices.some((s) => s.id === id);
   }
 
-  function toggle(item: { id: number; name: string; price: number; duration: string }, category: string) {
+  function toggle(item: ServiceRow) {
     if (isSelected(item.id)) {
       onUpdate(selectedServices.filter((s) => s.id !== item.id));
     } else {
-      onUpdate([...selectedServices, { ...item, category }]);
+      onUpdate([...selectedServices, { ...item, duration: "", category: item.category }]);
     }
   }
 
@@ -79,21 +71,20 @@ export default function Step2Service({ selectedServices, onUpdate, onBack, onCan
     <div>
       <div className="flex gap-4 mb-6">
 
-        {/* Service list — fixed height + scroll */}
+        {/* Service list */}
         <div className="flex-1 max-h-72 overflow-y-auto pr-1 space-y-3 scrollbar-thin">
-          {SERVICE_CATALOG.map((group) => {
+          {groups.map((group) => {
             const isOpen = !collapsed.has(group.category);
             return (
               <div key={group.category}>
-                {/* Category header — clickable to collapse */}
                 <button
                   onClick={() => toggleCategory(group.category)}
                   className="w-full flex items-center gap-3 mb-2 group"
                 >
-                  <span className="text-xs font-bold text-brand-green tracking-widest">{group.category}</span>
+                  <span className="text-xs font-bold text-brand-green tracking-widest">{group.category.toUpperCase()}</span>
                   <div className="flex-1 h-px bg-gray-700" />
                   {isOpen
-                    ? <ChevronUp  className="w-3 h-3 text-gray-500 group-hover:text-gray-300 transition-colors" />
+                    ? <ChevronUp   className="w-3 h-3 text-gray-500 group-hover:text-gray-300 transition-colors" />
                     : <ChevronDown className="w-3 h-3 text-gray-500 group-hover:text-gray-300 transition-colors" />
                   }
                 </button>
@@ -113,12 +104,11 @@ export default function Step2Service({ selectedServices, onUpdate, onBack, onCan
                         >
                           <div>
                             <p className="text-sm text-white font-medium">{item.name}</p>
-                            <p className="text-xs text-gray-500">{item.duration}</p>
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-sm text-white">₹{item.price}</span>
                             <button
-                              onClick={() => toggle(item, group.category)}
+                              onClick={() => toggle(item)}
                               className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${
                                 selected
                                   ? "bg-brand-green text-black hover:opacity-80"

@@ -1,20 +1,25 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Dropdown from "@/components/ui/Dropdown";
+import { supabase } from "@/lib/supabase";
 import type { BookingForm } from "./types";
 
-const STYLIST_OPTIONS = [
-  { label: "Any Available", value: "any"   },
-  { label: "Ravi Kumar",    value: "ravi"  },
-  { label: "Amit Singh",    value: "amit"  },
-  { label: "Priya Sharma",  value: "priya" },
-];
-
-const TIME_SLOTS = [
-  "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
-  "12:00 PM", "12:30 PM",  "1:00 PM",  "1:30 PM",
-   "2:00 PM",  "2:30 PM",  "3:00 PM",  "3:30 PM",
-];
+function generateSlots(openTime: string, closeTime: string, durationMin: number): string[] {
+  const [openH, openM]   = openTime.split(":").map(Number);
+  const [closeH, closeM] = closeTime.split(":").map(Number);
+  const openTotal  = openH  * 60 + openM;
+  const closeTotal = closeH * 60 + closeM;
+  const slots: string[] = [];
+  for (let mins = openTotal; mins < closeTotal; mins += durationMin) {
+    const h    = Math.floor(mins / 60);
+    const m    = mins % 60;
+    const ampm = h >= 12 ? "PM" : "AM";
+    const dh   = h > 12 ? h - 12 : h === 0 ? 12 : h;
+    slots.push(`${dh}:${m.toString().padStart(2, "0")} ${ampm}`);
+  }
+  return slots;
+}
 
 function toMinutes(slot: string): number {
   const [time, ampm] = slot.split(" ");
@@ -30,6 +35,15 @@ function isSlotPast(slot: string, selectedDate: string): boolean {
   return toMinutes(slot) <= now.getHours() * 60 + now.getMinutes();
 }
 
+type Booking       = { time_slot: string; staff_id: string | null };
+type StaffOption   = { label: string; value: string };
+type LocationSettings = {
+  open_time: string;
+  close_time: string;
+  slot_duration_minutes: number;
+  max_concurrent_bookings: number;
+};
+
 type Props = {
   form: BookingForm;
   onUpdate: <K extends keyof BookingForm>(key: K, value: BookingForm[K]) => void;
@@ -39,15 +53,101 @@ type Props = {
 };
 
 export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext }: Props) {
-  const today    = new Date().toISOString().split("T")[0];
-  const canNext  = form.date !== "" && form.timeSlot !== "";
+  const [staffOptions,      setStaffOptions]      = useState<StaffOption[]>([]);
+  const [locationSettings,  setLocationSettings]  = useState<LocationSettings | null>(null);
+  const [bookings,          setBookings]           = useState<Booking[]>([]);
+  const [staffCount,        setStaffCount]         = useState(0);
+  const [loadingSlots,      setLoadingSlots]       = useState(false);
+
+  // Load staff + location settings when location changes
+  useEffect(() => {
+    if (!form.locationId) return;
+
+    supabase
+      .from("staff")
+      .select("id, name")
+      .eq("location_id", form.locationId)
+      .order("name")
+      .then(({ data }) => {
+        const options: StaffOption[] = [];
+        if (data) data.forEach((s) => options.push({ label: s.name, value: s.id }));
+        setStaffOptions(options);
+      });
+
+    supabase
+      .from("locations")
+      .select("open_time, close_time, slot_duration_minutes, max_concurrent_bookings")
+      .eq("id", form.locationId)
+      .single()
+      .then(({ data }) => {
+        if (data) setLocationSettings(data as LocationSettings);
+      });
+  }, [form.locationId]);
+
+  // Load existing bookings + staff count when date or location changes
+  useEffect(() => {
+    if (!form.date || !form.locationId) {
+      setBookings([]);
+      setStaffCount(0);
+      return;
+    }
+    setLoadingSlots(true);
+    Promise.all([
+      supabase
+        .from("appointments")
+        .select("time_slot, staff_id")
+        .eq("location_id", form.locationId)
+        .eq("appointment_date", form.date)
+        .neq("status", "cancelled"),
+      supabase
+        .from("staff")
+        .select("*", { count: "exact", head: true })
+        .eq("location_id", form.locationId),
+    ]).then(([{ data: appts }, { count }]) => {
+      setBookings(appts ?? []);
+      setStaffCount(count ?? 0);
+      setLoadingSlots(false);
+    });
+  }, [form.date, form.locationId]);
+
+  const timeSlots = locationSettings
+    ? generateSlots(
+        locationSettings.open_time,
+        locationSettings.close_time,
+        locationSettings.slot_duration_minutes
+      )
+    : [];
+
+  // Effective capacity: min(staff at location, owner-set max)
+  const effectiveCapacity = locationSettings
+    ? Math.min(staffCount, locationSettings.max_concurrent_bookings)
+    : staffCount;
+
+  function isSlotFullyBooked(slot: string): boolean {
+    if (effectiveCapacity === 0) return false;
+    const slotTotal = bookings.filter((b) => b.time_slot === slot).length;
+    if (slotTotal >= effectiveCapacity) return true;
+    if (form.staffId) {
+      return bookings.some((b) => b.time_slot === slot && b.staff_id === form.staffId);
+    }
+    return false;
+  }
+
+  const today   = new Date().toISOString().split("T")[0];
+  const canNext = form.date !== "" && form.timeSlot !== "";
 
   function handleDateChange(date: string) {
-    // If selected date changes and current time slot is now in the past, clear it
-    if (form.timeSlot && isSlotPast(form.timeSlot, date)) {
+    if (form.timeSlot && isSlotPast(form.timeSlot, date)) onUpdate("timeSlot", "");
+    onUpdate("date", date);
+  }
+
+  function handleStaffChange(staffId: string) {
+    const option = staffOptions.find((o) => o.value === staffId);
+    onUpdate("staffId", staffId);
+    onUpdate("staffName", option?.label ?? "Any Available");
+    if (form.timeSlot && staffId && bookings.some((b) => b.time_slot === form.timeSlot && b.staff_id === staffId)) {
       onUpdate("timeSlot", "");
     }
-    onUpdate("date", date);
   }
 
   return (
@@ -69,9 +169,9 @@ export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext
           <div>
             <label className="block text-xs text-gray-400 mb-1.5">Stylist</label>
             <Dropdown
-              value={form.stylist}
-              onChange={(v) => onUpdate("stylist", v)}
-              options={STYLIST_OPTIONS}
+              value={form.staffId}
+              onChange={handleStaffChange}
+              options={staffOptions}
               placeholder="Any Available"
               variant="dark"
             />
@@ -80,31 +180,55 @@ export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext
 
         {/* Time slots */}
         <div>
-          <p className="text-xs font-bold text-gray-400 tracking-widest mb-3">AVAILABLE TIME SLOTS</p>
-          <div className="grid grid-cols-4 gap-2">
-            {TIME_SLOTS.map((slot) => {
-              const past     = isSlotPast(slot, form.date);
-              const selected = form.timeSlot === slot;
-              return (
-                <button
-                  key={slot}
-                  onClick={() => !past && onUpdate("timeSlot", slot)}
-                  disabled={past}
-                  className={`py-2 text-sm rounded-xl border font-medium transition-colors ${
-                    past
-                      ? "bg-[#111] text-gray-700 border-[#222] cursor-not-allowed line-through"
-                      : selected
-                        ? "bg-brand-green text-black border-brand-green"
-                        : "bg-[#1c1c1c] text-gray-300 border-[#333] hover:border-gray-500"
-                  }`}
-                >
-                  {slot}
-                </button>
-              );
-            })}
-          </div>
-          {form.date === today && (
-            <p className="text-xs text-gray-600 mt-2">Strikethrough slots are no longer available today.</p>
+          <p className="text-xs font-bold text-gray-400 tracking-widest mb-3">
+            AVAILABLE TIME SLOTS
+            {loadingSlots && (
+              <span className="ml-2 normal-case font-normal text-gray-600">Checking availability…</span>
+            )}
+          </p>
+
+          {!form.locationId ? (
+            <p className="text-sm text-gray-600">Select a location in Step 1 to see available slots.</p>
+          ) : !form.date ? (
+            <p className="text-sm text-gray-600">Pick a date to see available slots.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-4 gap-2">
+                {timeSlots.map((slot) => {
+                  const past     = isSlotPast(slot, form.date);
+                  const booked   = !past && isSlotFullyBooked(slot);
+                  const selected = form.timeSlot === slot;
+                  const disabled = past || booked;
+
+                  return (
+                    <button
+                      key={slot}
+                      onClick={() => !disabled && onUpdate("timeSlot", slot)}
+                      disabled={disabled}
+                      className={`py-2 text-sm rounded-xl border font-medium transition-colors ${
+                        past
+                          ? "bg-[#111] text-gray-700 border-[#222] cursor-not-allowed line-through"
+                          : booked
+                            ? "bg-[#1a0a0a] text-red-800 border-[#2a1010] cursor-not-allowed"
+                            : selected
+                              ? "bg-brand-green text-black border-brand-green"
+                              : "bg-[#1c1c1c] text-gray-300 border-[#333] hover:border-gray-500"
+                      }`}
+                    >
+                      {booked ? "Full" : slot}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center gap-4 mt-3 text-xs text-gray-600">
+                {form.date === today && <span>Strikethrough = past</span>}
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded bg-[#1a0a0a] border border-[#2a1010] shrink-0" />
+                  Full = no availability
+                </span>
+              </div>
+            </>
           )}
         </div>
       </div>
@@ -115,7 +239,7 @@ export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext
         <button onClick={onBack} className="text-sm text-gray-400 hover:text-white transition-colors">Back</button>
         <div className="flex gap-3">
           <ModalButton variant="outline" onClick={onCancel}>Cancel</ModalButton>
-          <ModalButton variant="green"   onClick={onNext} disabled={!canNext}>Next</ModalButton>
+          <ModalButton variant="green" onClick={onNext} disabled={!canNext}>Next</ModalButton>
         </div>
       </div>
     </div>

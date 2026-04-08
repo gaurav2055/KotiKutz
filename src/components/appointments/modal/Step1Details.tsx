@@ -1,17 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { UserCircle2 } from "lucide-react";
 import DarkInput from "@/components/ui/DarkInput";
 import Dropdown from "@/components/ui/Dropdown";
+import { supabase } from "@/lib/supabase";
 import type { BookingForm } from "./types";
-
-const LOCATION_OPTIONS = [
-  { label: "Porwal Road",     value: "Porwal Road" },
-  { label: "Viman Nagar",     value: "Viman Nagar" },
-  { label: "Dhanori",         value: "Dhanori" },
-  { label: "Lohegaon",        value: "Lohegaon" },
-  { label: "Dahisar, Mumbai", value: "Dahisar, Mumbai" },
-];
 
 type Props = {
   form: BookingForm;
@@ -22,7 +16,24 @@ type Props = {
 };
 
 export default function Step1Details({ form, isLoggedIn, onUpdate, onCancel, onNext }: Props) {
-  const canNext = form.location !== "";
+  const [locationOptions, setLocationOptions] = useState<{ label: string; value: string }[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("locations")
+      .select("id, name")
+      .then(({ data }) => {
+        if (data) setLocationOptions(data.map((l) => ({ label: l.name, value: l.id })));
+      });
+  }, []);
+
+  const canNext = form.locationId !== "";
+
+  function handleLocationChange(id: string) {
+    const loc = locationOptions.find((l) => l.value === id);
+    onUpdate("locationId", id);
+    onUpdate("location", loc?.label ?? "");
+  }
 
   return (
     <div>
@@ -51,9 +62,9 @@ export default function Step1Details({ form, isLoggedIn, onUpdate, onCancel, onN
         <div>
           <label className="block text-xs text-gray-400 mb-1.5">Location</label>
           <Dropdown
-            value={form.location}
-            onChange={(v) => onUpdate("location", v)}
-            options={LOCATION_OPTIONS}
+            value={form.locationId}
+            onChange={handleLocationChange}
+            options={locationOptions}
             placeholder="Choose Location"
             variant="dark"
           />

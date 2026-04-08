@@ -1,8 +1,12 @@
-import { MapPin, User, Clock, Calendar, CheckCircle2 } from "lucide-react";
+"use client";
+
+import { useState } from "react";
+import { User, Clock, Calendar, CheckCircle2 } from "lucide-react";
 import type { BookingForm } from "./types";
 
 type Props = {
-  form: BookingForm;
+  form:      BookingForm;
+  userId:    string;
   onBack:    () => void;
   onCancel:  () => void;
   onConfirm: () => void;
@@ -17,9 +21,33 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-export default function Step4Confirm({ form, onBack, onCancel, onConfirm }: Props) {
+export default function Step4Confirm({ form, userId, onBack, onCancel, onConfirm }: Props) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const total = form.services.reduce((sum, s) => sum + s.price, 0);
-  const stylistLabel = form.stylist && form.stylist !== "any" ? form.stylist : "Any Available";
+  const stylistLabel = form.staffName || "Any Available";
+
+  async function handleConfirm() {
+    setLoading(true);
+    setError(null);
+    const res = await fetch("/api/appointments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId,
+        locationId:  form.locationId,
+        date:        form.date,
+        timeSlot:    form.timeSlot,
+        staffId:     form.staffId || null,
+        services:    form.services.map((s) => s.id),
+        totalPrice:  total,
+      }),
+    });
+    const data = await res.json();
+    if (!res.ok) { setError(data.error ?? "Something went wrong."); setLoading(false); return; }
+    setLoading(false);
+    onConfirm();
+  }
 
   return (
     <div>
@@ -74,20 +102,25 @@ export default function Step4Confirm({ form, onBack, onCancel, onConfirm }: Prop
 
       <div className="border-t border-gray-700 mb-4" />
 
+      {error && <p className="text-red-400 text-xs mb-3 text-center">{error}</p>}
+
       <div className="flex items-center justify-between">
         <button onClick={onBack} className="text-sm text-gray-400 hover:text-white transition-colors">Back</button>
         <div className="flex gap-3">
           <ModalButton variant="outline" onClick={onCancel}>Cancel</ModalButton>
-          <ModalButton variant="green"   onClick={onConfirm}>Confirm Booking</ModalButton>
+          <ModalButton variant="green" onClick={handleConfirm} disabled={loading}>
+            {loading ? "Booking…" : "Confirm Booking"}
+          </ModalButton>
         </div>
       </div>
     </div>
   );
 }
 
-function ModalButton({ variant, onClick, children }: {
+function ModalButton({ variant, onClick, disabled, children }: {
   variant: "outline" | "green";
   onClick?: () => void;
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   const styles = {
@@ -97,7 +130,8 @@ function ModalButton({ variant, onClick, children }: {
   return (
     <button
       onClick={onClick}
-      className={`px-5 py-2 text-sm rounded-full font-medium transition-all cursor-pointer ${styles[variant]}`}
+      disabled={disabled}
+      className={`px-5 py-2 text-sm rounded-full font-medium transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${styles[variant]}`}
     >
       {children}
     </button>
