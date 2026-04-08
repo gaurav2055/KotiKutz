@@ -1,10 +1,37 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import { Phone, Mail } from "lucide-react";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 const LOGO = "/logo.png";
 
+type Location = { id: string; name: string };
+
 export default function Footer() {
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [phone,     setPhone]     = useState("+919820571506");
+  const [email,     setEmail]     = useState("jaygauravs@gmail.com");
+
+  useEffect(() => {
+    supabase.from("locations").select("id, name").order("name").then(({ data }) => {
+      if (data) setLocations(data);
+    });
+
+    supabase
+      .from("site_content")
+      .select("key, value")
+      .in("key", ["contact_phone", "contact_email"])
+      .then(({ data }) => {
+        data?.forEach((row) => {
+          if (row.key === "contact_phone" && row.value) setPhone(row.value);
+          if (row.key === "contact_email" && row.value) setEmail(row.value);
+        });
+      });
+  }, []);
+
   return (
     <footer className="bg-brand-dark text-white w-full">
       <div className="max-w-[1440px] mx-auto px-10 pt-12 pb-6">
@@ -19,11 +46,9 @@ export default function Footer() {
           <div>
             <p className="text-brand-green text-2xl mb-4">Location</p>
             <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-base text-brand-green">
-              <span>Porwal Road</span>
-              <span>Viman Nagar</span>
-              <span>Lohegaon</span>
-              <span>Dhanori</span>
-              <span>Dahisar, Mumbai</span>
+              {locations.map((loc) => (
+                <span key={loc.id}>{loc.name}</span>
+              ))}
             </div>
           </div>
 
@@ -32,11 +57,11 @@ export default function Footer() {
             <p className="text-brand-green text-2xl mb-4">Contact Details</p>
             <div className="flex items-center gap-2 text-brand-green mb-2">
               <Phone className="w-5 h-5 shrink-0" />
-              <span>+919820571506</span>
+              <span>{phone}</span>
             </div>
             <div className="flex items-center gap-2 text-brand-green">
               <Mail className="w-5 h-5 shrink-0" />
-              <span>jaygauravs@gmail.com</span>
+              <span>{email}</span>
             </div>
           </div>
         </div>

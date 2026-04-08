@@ -3,31 +3,30 @@ import Image from "next/image";
 import Link from "next/link";
 
 const SERVICES_ICON = "/images/Services Icon.png";
-
-const HERO_IMAGE = "/images/hero.jpg";
+const DEFAULT_HERO  = "/images/hero.jpg";
 
 type Props = {
-	title?: string;
+	title?:           string;
+	heroImage?:       string | null;
 	showServicesBtn?: boolean;
-	showBookingBtn?: boolean;
+	showBookingBtn?:  boolean;
 };
 
-export default function SiteHero({ title, showServicesBtn = true, showBookingBtn = true }: Props) {
+export default function SiteHero({ title, heroImage, showServicesBtn = true, showBookingBtn = true }: Props) {
 	const hasButtons = showServicesBtn || showBookingBtn;
+	const image      = heroImage || DEFAULT_HERO;
 
 	return (
 		<section className='relative h-[412px] overflow-hidden'>
 			<Image
-				src={HERO_IMAGE}
+				src={image}
 				alt={title ?? "KotiKutz Barbershop"}
 				fill
 				className='object-cover'
 			/>
 
-			{/* Dark overlay — only when a title is shown */}
 			{title && <div className='absolute inset-0 bg-[rgba(41,41,41,0.85)]' />}
 
-			{/* Centered title */}
 			{title && (
 				<div className='absolute inset-0 flex items-center justify-center pb-16'>
 					<h1 className='font-algerian text-[64px] text-brand-green tracking-wide'>
@@ -41,16 +40,10 @@ export default function SiteHero({ title, showServicesBtn = true, showBookingBtn
 					{showServicesBtn && (
 						<Link href='/services'>
 							<div className='relative bg-brand-dark rounded-full w-[117px] h-[110px] overflow-hidden cursor-pointer hover:opacity-80 transition-opacity'>
-								<Image
-									src={SERVICES_ICON}
-									alt='Services'
-									fill
-									className='object-contain'
-								/>
+								<Image src={SERVICES_ICON} alt='Services' fill className='object-contain' />
 							</div>
 						</Link>
 					)}
-
 					{showBookingBtn && (
 						<Link href='/appointments'>
 							<div className='bg-brand-dark rounded-full w-[117px] h-[110px] flex flex-col items-center justify-center gap-1 cursor-pointer hover:opacity-80 transition-opacity'>
