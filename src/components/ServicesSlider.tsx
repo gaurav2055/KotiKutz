@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ServiceCard from "@/components/ServiceCard";
+import Skeleton from "@/components/ui/Skeleton";
 import { supabase } from "@/lib/supabase";
 
 type Service = {
@@ -15,8 +16,23 @@ type Service = {
 
 const CARDS_VISIBLE = 3;
 
+function SliderSkeleton() {
+  return (
+    <div className="flex items-center justify-center gap-8 px-16">
+      <ChevronLeft className="w-6 h-6 text-white opacity-30 shrink-0" />
+      <div className="flex gap-14">
+        {Array.from({ length: CARDS_VISIBLE }).map((_, i) => (
+          <Skeleton key={i} className="w-[410px] h-[449px] rounded-[15px] bg-gray-600" />
+        ))}
+      </div>
+      <ChevronRight className="w-6 h-6 text-white opacity-30 shrink-0" />
+    </div>
+  );
+}
+
 export default function ServicesSlider() {
-  const [services, setServices] = useState<Service[]>([]);
+  const [services,  setServices]  = useState<Service[]>([]);
+  const [loading,   setLoading]   = useState(true);
   const [startIndex, setStartIndex] = useState(0);
 
   useEffect(() => {
@@ -24,12 +40,17 @@ export default function ServicesSlider() {
       .from("services")
       .select("id, name, price, description, image_url")
       .limit(10)
-      .then(({ data }) => { if (data) setServices(data); });
+      .then(({ data }) => {
+        if (data) setServices(data);
+        setLoading(false);
+      });
   }, []);
+
+  if (loading) return <SliderSkeleton />;
 
   const canGoPrev = startIndex > 0;
   const canGoNext = startIndex + CARDS_VISIBLE < services.length;
-  const visible = services.slice(startIndex, startIndex + CARDS_VISIBLE);
+  const visible   = services.slice(startIndex, startIndex + CARDS_VISIBLE);
 
   return (
     <div className="flex items-center justify-center gap-8 px-16">
