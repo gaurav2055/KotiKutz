@@ -1,70 +1,148 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import SiteHero from "@/components/SiteHero";
 import Dropdown from "@/components/ui/Dropdown";
 import TestimonialCard from "@/components/testimonials/TestimonialCard";
+import WriteReviewModal from "@/components/testimonials/WriteReviewModal";
+import Spinner from "@/components/ui/Spinner";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
-const LOCATION_OPTIONS = [
-  { label: "Porwal Road",     value: "Porwal Road" },
-  { label: "Viman Nagar",     value: "Viman Nagar" },
-  { label: "Dhanori",         value: "Dhanori" },
-  { label: "Lohegaon",        value: "Lohegaon" },
-  { label: "Dahisar, Mumbai", value: "Dahisar, Mumbai" },
-];
-
-// TODO: Replace with backend data
-const TESTIMONIALS = [
-  { id: 1, quote: "Lorem ipsum dolor sit amet consectetur. Ullamcorper et vel porta natoque ornare. Facilisi nisi nisl cursus gravida potenti.", name: "FName LName", location: "Viman Nagar",     rating: 4 },
-  { id: 2, quote: "Lorem ipsum dolor sit amet consectetur. Ullamcorper et vel porta natoque ornare. Facilisi nisi nisl cursus gravida potenti.", name: "FName Lname",  location: "Porwal Road",     rating: 5 },
-  { id: 3, quote: "Lorem ipsum dolor sit amet consectetur. Ullamcorper et vel porta natoque ornare. Facilisi nisi nisl cursus gravida potenti.", name: "FName Lname",  location: "Dhanori",         rating: 5 },
-  { id: 4, quote: "Lorem ipsum dolor sit amet consectetur. Ullamcorper et vel porta natoque ornare. Facilisi nisi nisl cursus gravida potenti.", name: "Anonymus",     location: "Lohegaon",        rating: 4 },
-];
+type Testimonial = {
+  id: string;
+  quote: string;
+  name: string;
+  location: string;
+  location_id: string;
+  rating: number;
+};
 
 export default function TestimonialsPage() {
-  const [location, setLocation] = useState("");
+  const { user } = useAuth();
+  const [testimonials, setTestimonials]   = useState<Testimonial[]>([]);
+  const [locationOptions, setLocationOptions] = useState<{ label: string; value: string }[]>([]);
+  const [location, setLocation]           = useState("");
+  const [loading, setLoading]             = useState(true);
+  const [heroImage, setHeroImage]         = useState<string | null>(null);
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+
+  function fetchTestimonials() {
+    supabase
+      .from("testimonials")
+      .select("id, content, rating, reviewer_name, location_id, locations(name), profiles(name, first_name, last_name)")
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          setTestimonials(data.map((t: any) => {
+            const profile = t.profiles;
+            const displayName = profile
+              ? (profile.first_name && profile.last_name
+                  ? `${profile.first_name} ${profile.last_name}`
+                  : profile.name ?? t.reviewer_name ?? "Anonymous")
+              : t.reviewer_name ?? "Anonymous";
+
+            const loc = Array.isArray(t.locations) ? t.locations[0] : t.locations;
+            return {
+              id:          t.id,
+              quote:       t.content,
+              name:        displayName,
+              location:    loc?.name ?? "",
+              location_id: t.location_id,
+              rating:      t.rating,
+            };
+          }));
+        }
+        setLoading(false);
+      });
+  }
+
+  useEffect(() => {
+    fetchTestimonials();
+    supabase
+      .from("locations")
+      .select("id, name")
+      .then(({ data }) => {
+        if (data) setLocationOptions(data.map((l) => ({ label: l.name, value: l.id })));
+      });
+    supabase
+      .from("site_content")
+      .select("value")
+      .eq("key", "hero_image_testimonials")
+      .single()
+      .then(({ data }) => { if (data?.value) setHeroImage(data.value); });
+  }, []);
 
   const filtered = useMemo(() =>
-    location ? TESTIMONIALS.filter((t) => t.location === location) : TESTIMONIALS,
-    [location]
+    location ? testimonials.filter((t) => t.location_id === location) : testimonials,
+    [location, testimonials]
   );
 
   const [featured, ...rest] = filtered;
 
+  const reviewerName = user
+    ? (user.user_metadata?.full_name ?? user.email ?? "Anonymous")
+    : "";
+
   return (
     <main>
-      <SiteHero title="Testimonials" />
+      <SiteHero title="Testimonials" heroImage={heroImage} />
 
       <div className="max-w-[1229px] mx-auto px-8 py-10">
 
-        {/* Location filter */}
-        <div className="w-[219px] mb-8">
-          <Dropdown
-            value={location}
-            onChange={setLocation}
-            options={LOCATION_OPTIONS}
-            placeholder="Choose Location"
-            variant="light"
-          />
+        {/* Top bar — filter + write review button */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="w-[219px]">
+            <Dropdown
+              value={location}
+              onChange={setLocation}
+              options={locationOptions}
+              placeholder="All Locations"
+              variant="light"
+            />
+          </div>
+          {user && (
+            <button
+              onClick={() => setReviewModalOpen(true)}
+              className="bg-brand-dark text-white px-5 py-2.5 rounded-[10px] text-sm font-medium hover:opacity-80 transition-opacity"
+            >
+              + Write a Review
+            </button>
+          )}
         </div>
 
-        {/* Featured testimonial */}
-        {featured && (
-          <div className="mb-8">
-            <TestimonialCard {...featured} featured />
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Spinner size="lg" label="Loading reviews…" />
           </div>
+        ) : filtered.length === 0 ? (
+          <p className="text-gray-400 text-center py-20">No reviews yet for this location.</p>
+        ) : (
+          <>
+            {featured && (
+              <div className="mb-8">
+                <TestimonialCard {...featured} featured />
+              </div>
+            )}
+            {rest.length > 0 && (
+              <div className="flex gap-6 flex-wrap">
+                {rest.map((t) => (
+                  <TestimonialCard key={t.id} {...t} />
+                ))}
+              </div>
+            )}
+          </>
         )}
-
-        {/* Row of remaining testimonials */}
-        {rest.length > 0 && (
-          <div className="flex gap-6">
-            {rest.map((t) => (
-              <TestimonialCard key={t.id} {...t} />
-            ))}
-          </div>
-        )}
-
       </div>
+
+      {reviewModalOpen && user && (
+        <WriteReviewModal
+          userId={user.id}
+          reviewerName={reviewerName}
+          onClose={() => setReviewModalOpen(false)}
+          onSubmitted={fetchTestimonials}
+        />
+      )}
     </main>
   );
 }
