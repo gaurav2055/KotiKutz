@@ -1,11 +1,61 @@
-// TODO: Replace with real activity data from backend
-const ACTIVITIES = [
-  { id: 1, service: "Hair Cut + Beard Styling", location: "Viman Nagar", stylist: "Ravi K.", date: "12 Feb 2026", amount: "₹450" },
-  { id: 2, service: "Hair Cut + Beard Styling", location: "Viman Nagar", stylist: "Ravi K.", date: "12 Feb 2026", amount: "₹450" },
-  { id: 3, service: "Hair Cut + Beard Styling", location: "Viman Nagar", stylist: "Ravi K.", date: "12 Feb 2026", amount: "₹450" },
-];
+"use client";
 
-export default function RecentActivity() {
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
+
+type Activity = {
+  id: string;
+  service: string;
+  location: string;
+  staffName: string;
+  date: string;
+  amount: string;
+};
+
+type Props = { userId: string };
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    day: "2-digit", month: "short", year: "numeric",
+  });
+}
+
+export default function RecentActivity({ userId }: Props) {
+  const [activities, setActivities] = useState<Activity[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("appointments")
+      .select(`
+        id, appointment_date, total_price,
+        locations(name),
+        staff(name),
+        appointment_services(services(name))
+      `)
+      .eq("user_id", userId)
+      .order("appointment_date", { ascending: false })
+      .limit(3)
+      .then(({ data }) => {
+        if (!data) return;
+        setActivities(
+          data.map((a: any) => ({
+            id: a.id,
+            service:
+              a.appointment_services
+                ?.map((as: any) => as.services?.name)
+                .filter(Boolean)
+                .join(" + ") || "Service",
+            location: a.locations?.name ?? "—",
+            staffName: a.staff?.name ?? "Any Available",
+            date: formatDate(a.appointment_date),
+            amount: `₹${a.total_price ?? 0}`,
+          }))
+        );
+      });
+  }, [userId]);
+
+  if (activities.length === 0) return null;
+
   return (
     <div className="rounded-[10px] border border-gray-200 p-8">
 
@@ -16,10 +66,9 @@ export default function RecentActivity() {
       </div>
 
       <div className="space-y-5">
-        {ACTIVITIES.map((a) => (
+        {activities.map((a) => (
           <div key={a.id} className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              {/* Commute icon */}
               <div className="text-gray-500 shrink-0">
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
                   <path d="M17 12V5a3 3 0 0 0-6 0v1H5v13h14v-7h-2zM11 5a1 1 0 0 1 2 0v1h-2V5zm8 14H5V8h6V5a3 3 0 0 1 6 0v3h2v11z"/>
@@ -28,7 +77,7 @@ export default function RecentActivity() {
               </div>
               <div>
                 <p className="text-base font-semibold text-black">{a.service}</p>
-                <p className="text-sm text-gray-500">{a.location} · Stylist: {a.stylist}</p>
+                <p className="text-sm text-gray-500">{a.location} · Stylist: {a.staffName}</p>
               </div>
             </div>
 

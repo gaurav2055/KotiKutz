@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, X } from "lucide-react";
 import TextInput from "@/components/ui/TextInput";
 import Dropdown from "@/components/ui/Dropdown";
 import Button from "@/components/ui/Button";
+import { supabase } from "@/lib/supabase";
+import type { Profile } from "@/app/profile/page";
 
 const GENDER_OPTIONS = [
   { label: "Male",   value: "Male" },
@@ -12,40 +14,94 @@ const GENDER_OPTIONS = [
   { label: "Other",  value: "Other" },
 ];
 
-const LOCATION_OPTIONS = [
-  { label: "Porwal Road",     value: "Porwal Road" },
-  { label: "Viman Nagar",     value: "Viman Nagar" },
-  { label: "Dhanori",         value: "Dhanori" },
-  { label: "Lohegaon",        value: "Lohegaon" },
-  { label: "Dahisar, Mumbai", value: "Dahisar, Mumbai" },
-];
-
-const DEFAULT_FORM = {
-  firstName: "Gaurav",
-  lastName:  "Suvarna",
-  phone:     "+91 9820571506",
-  email:     "Jaygauravs@gmail.com",
-  dob:       "04/12/1995",
-  gender:    "Male",
-  location:  "Viman Nagar",
+type FormState = {
+  first_name: string;
+  last_name: string;
+  phone: string;
+  dob: string;
+  gender: string;
+  preferred_location_id: string;
 };
 
-export default function PersonalInfoForm() {
-  const [editing, setEditing] = useState(false);
-  const [saved, setSaved]     = useState(DEFAULT_FORM);
-  const [form, setForm]       = useState(DEFAULT_FORM);
+type Props = {
+  userId: string;
+  profile: Profile;
+  onSave: (updated: Partial<Profile>) => void;
+};
 
-  function set(field: string, value: string) {
+export default function PersonalInfoForm({ userId, profile, onSave }: Props) {
+  const [editing, setEditing]   = useState(false);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+  const [locationOptions, setLocationOptions] = useState<{ label: string; value: string }[]>([]);
+
+  const [form, setForm] = useState<FormState>({
+    first_name:            profile.first_name ?? "",
+    last_name:             profile.last_name ?? "",
+    phone:                 profile.phone ?? "",
+    dob:                   profile.dob ?? "",
+    gender:                profile.gender ?? "",
+    preferred_location_id: profile.preferred_location_id ?? "",
+  });
+
+  useEffect(() => {
+    supabase
+      .from("locations")
+      .select("id, name")
+      .then(({ data }) => {
+        if (data) setLocationOptions(data.map((l) => ({ label: l.name, value: l.id })));
+      });
+  }, []);
+
+  function set(field: keyof FormState, value: string) {
     setForm((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handleSave() {
-    setSaved(form);
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    const selectedLoc = locationOptions.find((l) => l.value === form.preferred_location_id);
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        first_name:            form.first_name || null,
+        last_name:             form.last_name || null,
+        name:                  `${form.first_name} ${form.last_name}`.trim() || null,
+        phone:                 form.phone || null,
+        dob:                   form.dob || null,
+        gender:                form.gender || null,
+        preferred_location_id: form.preferred_location_id || null,
+      })
+      .eq("id", userId);
+
+    if (error) { setError(error.message); setSaving(false); return; }
+
+    onSave({
+      first_name:              form.first_name,
+      last_name:               form.last_name,
+      name:                    `${form.first_name} ${form.last_name}`.trim(),
+      phone:                   form.phone,
+      dob:                     form.dob,
+      gender:                  form.gender,
+      preferred_location_id:   form.preferred_location_id,
+      preferred_location_name: selectedLoc?.label ?? null,
+    });
+
+    setSaving(false);
     setEditing(false);
   }
 
   function handleCancel() {
-    setForm(saved);
+    setForm({
+      first_name:            profile.first_name ?? "",
+      last_name:             profile.last_name ?? "",
+      phone:                 profile.phone ?? "",
+      dob:                   profile.dob ?? "",
+      gender:                profile.gender ?? "",
+      preferred_location_id: profile.preferred_location_id ?? "",
+    });
+    setError(null);
     setEditing(false);
   }
 
@@ -58,7 +114,7 @@ export default function PersonalInfoForm() {
           <div className="w-1 h-8 bg-brand-green rounded-full" />
           <h2 className="text-xl font-bold text-black uppercase tracking-wide">Personal Information</h2>
         </div>
-        {!editing && (
+        {!editing ? (
           <button
             onClick={() => setEditing(true)}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-black transition-colors"
@@ -66,8 +122,7 @@ export default function PersonalInfoForm() {
             <Pencil className="w-4 h-4" />
             Edit
           </button>
-        )}
-        {editing && (
+        ) : (
           <button
             onClick={handleCancel}
             className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-black transition-colors"
@@ -82,21 +137,21 @@ export default function PersonalInfoForm() {
       {!editing && (
         <div className="grid grid-cols-2 gap-x-6 gap-y-5">
           {[
-            { label: "First Name",    value: saved.firstName },
-            { label: "Last Name",     value: saved.lastName  },
-            { label: "Phone Number",  value: saved.phone     },
-            { label: "Email Address", value: saved.email     },
-            { label: "Date of Birth", value: saved.dob       },
-            { label: "Gender",        value: saved.gender    },
+            { label: "First Name",    value: profile.first_name },
+            { label: "Last Name",     value: profile.last_name  },
+            { label: "Phone Number",  value: profile.phone      },
+            { label: "Email Address", value: profile.email      },
+            { label: "Date of Birth", value: profile.dob        },
+            { label: "Gender",        value: profile.gender     },
           ].map(({ label, value }) => (
             <div key={label}>
               <p className="text-sm text-gray-500 mb-1">{label}</p>
-              <p className="text-base font-medium text-black">{value}</p>
+              <p className="text-base font-medium text-black">{value ?? "—"}</p>
             </div>
           ))}
           <div className="col-span-2">
             <p className="text-sm text-gray-500 mb-1">Preferred Location</p>
-            <p className="text-base font-medium text-black">{saved.location}</p>
+            <p className="text-base font-medium text-black">{profile.preferred_location_name ?? "—"}</p>
           </div>
         </div>
       )}
@@ -105,12 +160,15 @@ export default function PersonalInfoForm() {
       {editing && (
         <>
           <div className="grid grid-cols-2 gap-x-6 gap-y-5">
-            <TextInput label="First Name"    value={form.firstName} onChange={(v) => set("firstName", v)} />
-            <TextInput label="Last Name"     value={form.lastName}  onChange={(v) => set("lastName", v)} />
-            <TextInput label="Phone Number"  value={form.phone}     onChange={(v) => set("phone", v)} />
-            <TextInput label="Email Address" value={form.email}     onChange={(v) => set("email", v)} />
-            <TextInput label="Date of Birth" value={form.dob}       onChange={(v) => set("dob", v)} />
-
+            <TextInput label="First Name"   value={form.first_name} onChange={(v) => set("first_name", v)} />
+            <TextInput label="Last Name"    value={form.last_name}  onChange={(v) => set("last_name", v)} />
+            <TextInput label="Phone Number" value={form.phone}      onChange={(v) => set("phone", v)} />
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Email Address</p>
+              <p className="text-base font-medium text-black">{profile.email ?? "—"}</p>
+              <p className="text-xs text-gray-400 mt-0.5">Email cannot be changed here</p>
+            </div>
+            <TextInput label="Date of Birth" value={form.dob}    onChange={(v) => set("dob", v)} />
             <div>
               <label className="block text-sm text-gray-600 mb-1">Gender</label>
               <Dropdown
@@ -126,21 +184,24 @@ export default function PersonalInfoForm() {
           <div className="mt-5">
             <label className="block text-sm text-gray-600 mb-1">Preferred Location</label>
             <Dropdown
-              value={form.location}
-              onChange={(v) => set("location", v)}
-              options={LOCATION_OPTIONS}
+              value={form.preferred_location_id}
+              onChange={(v) => set("preferred_location_id", v)}
+              options={locationOptions}
               placeholder="Choose Location"
               variant="light"
             />
           </div>
 
+          {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
+
           <div className="flex justify-end gap-3 mt-6">
             <Button variant="outline" onClick={handleCancel}>Cancel</Button>
-            <Button variant="dark" onClick={handleSave}>Save Changes</Button>
+            <Button variant="dark" onClick={handleSave} disabled={saving}>
+              {saving ? "Saving…" : "Save Changes"}
+            </Button>
           </div>
         </>
       )}
-
     </div>
   );
 }
