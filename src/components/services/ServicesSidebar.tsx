@@ -1,19 +1,11 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Dropdown from "@/components/ui/Dropdown";
 import SearchInput from "@/components/ui/SearchInput";
 import CategoryList from "@/components/services/CategoryList";
+import { supabase } from "@/lib/supabase";
 import type { FiltersState } from "@/app/services/page";
-
-const CATEGORIES = ["Hair", "Beard", "Skin"];
-
-const LOCATION_OPTIONS = [
-  { label: "Porwal Road",     value: "Porwal Road" },
-  { label: "Viman Nagar",     value: "Viman Nagar" },
-  { label: "Dhanori",         value: "Dhanori" },
-  { label: "Lohegaon",        value: "Lohegaon" },
-  { label: "Dahisar, Mumbai", value: "Dahisar, Mumbai" },
-];
 
 const GENDER_OPTIONS = [
   { label: "Men",   value: "Men" },
@@ -23,10 +15,19 @@ const GENDER_OPTIONS = [
 
 type Props = {
   filters: FiltersState;
+  categories: string[];
   onChange: (filters: FiltersState) => void;
 };
 
-export default function ServicesSidebar({ filters, onChange }: Props) {
+export default function ServicesSidebar({ filters, categories, onChange }: Props) {
+  const [locationOptions, setLocationOptions] = useState<{ label: string; value: string }[]>([]);
+
+  useEffect(() => {
+    supabase.from("locations").select("id, name").order("name").then(({ data }) => {
+      if (data) setLocationOptions(data.map((l) => ({ label: l.name, value: l.id })));
+    });
+  }, []);
+
   function toggleCategory(cat: string) {
     const next = filters.categories.includes(cat)
       ? filters.categories.filter((c) => c !== cat)
@@ -40,9 +41,9 @@ export default function ServicesSidebar({ filters, onChange }: Props) {
 
       <div className="mb-4">
         <Dropdown
-          value={filters.location}
-          onChange={(val) => onChange({ ...filters, location: val })}
-          options={LOCATION_OPTIONS}
+          value={filters.locationId}
+          onChange={(val) => onChange({ ...filters, locationId: val })}
+          options={locationOptions}
           placeholder="Choose Location"
         />
       </div>
@@ -67,7 +68,7 @@ export default function ServicesSidebar({ filters, onChange }: Props) {
       <hr className="border-gray-700 mb-6" />
 
       <CategoryList
-        categories={CATEGORIES}
+        categories={categories}
         selected={filters.categories}
         onToggle={toggleCategory}
         onSelectAll={() => onChange({ ...filters, categories: [] })}
