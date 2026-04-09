@@ -31,6 +31,7 @@ export default function TestimonialsPage() {
     supabase
       .from("testimonials")
       .select("id, content, rating, reviewer_name, location_id, locations(name), profiles(name, first_name, last_name)")
+      .eq("status", "approved")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data) {
