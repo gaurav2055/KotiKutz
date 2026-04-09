@@ -91,6 +91,19 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
+  if (action === "complete") {
+    // Any role can mark an appointment as done
+    if (appt.status === "cancelled" || appt.status === "completed") {
+      return NextResponse.json({ error: "Cannot mark this appointment as done" }, { status: 400 });
+    }
+    const { error } = await supabaseAdmin
+      .from("appointments")
+      .update({ status: "completed" })
+      .eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ success: true });
+  }
+
   if (action === "confirm") {
     if (caller.role === "employee") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

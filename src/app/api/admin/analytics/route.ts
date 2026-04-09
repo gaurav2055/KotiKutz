@@ -20,11 +20,19 @@ export async function GET(request: NextRequest) {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
   // All queries in parallel
+  // Non-cancelled appointments (for bookings count, top services, daily chart)
   let apptQuery = supabaseAdmin
     .from("appointments")
     .select("id, appointment_date, total_price, status, location_id, appointment_services(services(name))", { count: "exact" })
     .gte("appointment_date", monthStart)
     .neq("status", "cancelled");
+
+  // Completed appointments only (for revenue — only count appointments that actually happened)
+  let completedQuery = supabaseAdmin
+    .from("appointments")
+    .select("id, total_price, location_id", { count: "exact" })
+    .gte("appointment_date", monthStart)
+    .eq("status", "completed");
 
   let allMonthQuery = supabaseAdmin
     .from("appointments")
@@ -42,22 +50,24 @@ export async function GET(request: NextRequest) {
     .in("role", ["employee", "manager"]);
 
   if (locationId) {
-    apptQuery     = apptQuery.eq("location_id", locationId);
-    allMonthQuery = allMonthQuery.eq("location_id", locationId);
-    dailyQuery    = dailyQuery.eq("location_id", locationId);
-    staffQuery    = staffQuery.eq("preferred_location_id", locationId);
+    apptQuery       = apptQuery.eq("location_id", locationId);
+    completedQuery  = completedQuery.eq("location_id", locationId);
+    allMonthQuery   = allMonthQuery.eq("location_id", locationId);
+    dailyQuery      = dailyQuery.eq("location_id", locationId);
+    staffQuery      = staffQuery.eq("preferred_location_id", locationId);
   }
 
   const [
     { data: monthAppts, count: totalBookings },
+    { data: completedAppts, count: completedCount },
     { count: allMonthCount },
     { data: dailyData },
     { count: staffCount },
-  ] = await Promise.all([apptQuery, allMonthQuery, dailyQuery, staffQuery]);
+  ] = await Promise.all([apptQuery, completedQuery, allMonthQuery, dailyQuery, staffQuery]);
 
-  // Revenue + avg booking value
-  const revenue = (monthAppts ?? []).reduce((sum, a) => sum + (a.total_price ?? 0), 0);
-  const avgBookingValue = totalBookings ? Math.round(revenue / totalBookings) : 0;
+  // Revenue = completed appointments only (actual money earned)
+  const revenue = (completedAppts ?? []).reduce((sum, a) => sum + (a.total_price ?? 0), 0);
+  const avgBookingValue = completedCount ? Math.round(revenue / completedCount) : 0;
 
   // Cancel count + rate
   const cancelCount = (allMonthCount ?? 0) - (totalBookings ?? 0);

@@ -183,7 +183,18 @@ export default function AdminAppointmentsPage() {
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* All roles: mark as done (past appointments only) */}
+                      {a.status !== "cancelled" && a.status !== "completed" &&
+                        new Date(a.appointment_date + "T00:00:00") < new Date() && (
+                        <button
+                          disabled={!!actionLoading}
+                          onClick={() => doAction(a.id, "complete")}
+                          className="text-xs px-2 py-1 rounded bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+                        >
+                          Mark Done
+                        </button>
+                      )}
                       {/* Employee: request cancellation */}
                       {role === "employee" && a.status !== "cancelled" && a.status !== "completed" && !a.cancellation_requested && (
                         <button
