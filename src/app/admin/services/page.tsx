@@ -142,18 +142,18 @@ export default function ServicesPage() {
                 {[
                   { label: "Name", key: "name", placeholder: "e.g. Classic Haircut" },
                   { label: "Category", key: "category", placeholder: "e.g. Hair" },
-                  { label: "Price (paise)", key: "price", placeholder: "e.g. 30000 for ₹300" },
+                  { label: "Price (₹)", key: "price", placeholder: "e.g. 300" },
                 ].map(({ label, key, placeholder }) => (
                   <div key={key}>
                     <label className="text-white/60 text-sm block mb-1">{label}</label>
                     <input value={form[key as keyof typeof form]} onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none" placeholder={placeholder} />
+                      className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]" placeholder={placeholder} />
                   </div>
                 ))}
                 <div>
                   <label className="text-white/60 text-sm block mb-1">Gender</label>
                   <select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none">
+                    className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]">
                     {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
                   </select>
                 </div>

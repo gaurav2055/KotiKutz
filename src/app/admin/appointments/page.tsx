@@ -108,7 +108,7 @@ export default function AdminAppointmentsPage() {
           <select
             value={filterLocation}
             onChange={(e) => setFilterLocation(e.target.value)}
-            className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none"
+            className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]"
           >
             <option value="">All Locations</option>
             {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
@@ -118,12 +118,12 @@ export default function AdminAppointmentsPage() {
           type="date"
           value={filterDate}
           onChange={(e) => setFilterDate(e.target.value)}
-          className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none"
+          className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]"
         />
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none"
+          className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]"
         >
           <option value="">All Statuses</option>
           {["pending", "confirmed", "completed", "cancelled"].map((s) => (

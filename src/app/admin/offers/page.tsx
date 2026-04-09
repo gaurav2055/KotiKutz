@@ -152,7 +152,7 @@ export default function OffersPage() {
                 <div>
                   <label className="text-white/60 text-sm block mb-1">Title</label>
                   <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })}
-                    className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none" />
+                    className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]" />
                 </div>
                 <div>
                   <label className="text-white/60 text-sm block mb-1">Description</label>
@@ -193,7 +193,7 @@ export default function OffersPage() {
                   <div>
                     <label className="text-white/60 text-sm block mb-1">Sort Order</label>
                     <input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: e.target.value })}
-                      className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none" />
+                      className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]" />
                   </div>
                   <div className="flex items-end pb-2">
                     <label className="flex items-center gap-2 cursor-pointer">

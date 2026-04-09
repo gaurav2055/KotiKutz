@@ -147,25 +147,25 @@ export default function StaffPage() {
               <div>
                 <label className="text-white/60 text-sm block mb-1">Email</label>
                 <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none" placeholder="staff@example.com" />
+                  className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]" placeholder="staff@example.com" />
               </div>
             )}
             <div>
               <label className="text-white/60 text-sm block mb-1">Full Name</label>
               <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none" placeholder="John Doe" />
+                className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]" placeholder="John Doe" />
             </div>
             <div>
               <label className="text-white/60 text-sm block mb-1">Role</label>
               <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none">
+                className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]">
                 {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r.replace("_", " ")}</option>)}
               </select>
             </div>
             <div>
               <label className="text-white/60 text-sm block mb-1">Location</label>
               <select value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none">
+                className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]">
                 <option value="">— Unassigned —</option>
                 {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
