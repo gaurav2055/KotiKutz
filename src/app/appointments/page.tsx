@@ -14,6 +14,18 @@ import Spinner from "@/components/ui/Spinner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
+type RawAppointment = {
+	id: string;
+	appointment_date: string;
+	time_slot: string;
+	status: string;
+	total_price: number | null;
+	staff_id: string | null;
+	locations: { id: string; name: string } | null;
+	staff: { name: string } | null;
+	appointment_services: Array<{ services: { name: string } | null }>;
+};
+
 type Appointment = {
 	id: string;
 	date: string; // raw "YYYY-MM-DD" for reschedule
@@ -60,7 +72,7 @@ export default function AppointmentsPage() {
 	const [locations, setLocations] = useState<{ label: string; value: string }[]>([]);
 	const [activeTab, setActiveTab] = useState<AppointmentTab>("upcoming");
 	const [location, setLocation] = useState("");
-	const [fetching, setFetching] = useState(true);
+	const [fetching, setFetching] = useState(false);
 
 	// Modal state
 	const [bookingOpen, setBookingOpen] = useState(false);
@@ -77,55 +89,55 @@ export default function AppointmentsPage() {
 	}, []);
 
 	useEffect(() => {
-		if (!user) { setFetching(false); return; }
-		if (appointments.length === 0) setFetching(true);
-		supabase
-			.from("appointments")
-			.select(
-				`
-        id, appointment_date, time_slot, status, total_price, staff_id,
-        locations(id, name),
-        staff(name),
-        appointment_services(services(name))
-      `,
-			)
-			.eq("user_id", user.id)
-			.order("appointment_date", { ascending: false })
-			.then(({ data }) => {
-				if (!data) {
-					setFetching(false);
-					return;
-				}
-				const mapped: Appointment[] = data.map((a: any) => {
-					const { dayNum, monthYear, dayLabel } = formatDate(a.appointment_date);
-					const serviceNames =
-						a.appointment_services
-							?.map((as: any) => as.services?.name)
-							.filter(Boolean)
-							.join(" + ") ?? "";
-					const status = (
-						a.status === "no_show" ? "missed" : a.status
-					) as AppointmentStatus;
-					return {
-						id: a.id,
-						date: a.appointment_date,
-						dayNum,
-						monthYear,
-						dayLabel,
-						service: serviceNames,
-						location: a.locations?.name ?? "",
-						locationId: a.locations?.id ?? "",
-						staffId: a.staff_id ?? null,
-						stylist: a.staff?.name ?? "Any Available",
-						time: a.time_slot,
-						status,
-						price: `₹${a.total_price ?? 0}`,
-						tab: statusToTab(status, a.appointment_date),
-					};
-				});
-				setAppointments(mapped);
-				setFetching(false);
+		async function load() {
+			if (!user) { setFetching(false); return; }
+			setFetching(true);
+			const { data } = await supabase
+				.from("appointments")
+				.select(
+					`
+          id, appointment_date, time_slot, status, total_price, staff_id,
+          locations(id, name),
+          staff(name),
+          appointment_services(services(name))
+        `,
+				)
+				.eq("user_id", user.id)
+				.order("appointment_date", { ascending: false });
+
+			if (!data) { setFetching(false); return; }
+
+			const mapped: Appointment[] = (data as unknown as RawAppointment[]).map((a) => {
+				const { dayNum, monthYear, dayLabel } = formatDate(a.appointment_date);
+				const serviceNames =
+					a.appointment_services
+						?.map((as) => as.services?.name)
+						.filter(Boolean)
+						.join(" + ") ?? "";
+				const status = (
+					a.status === "no_show" ? "missed" : a.status
+				) as AppointmentStatus;
+				return {
+					id: a.id,
+					date: a.appointment_date,
+					dayNum,
+					monthYear,
+					dayLabel,
+					service: serviceNames,
+					location: a.locations?.name ?? "",
+					locationId: a.locations?.id ?? "",
+					staffId: a.staff_id ?? null,
+					stylist: a.staff?.name ?? "Any Available",
+					time: a.time_slot,
+					status,
+					price: `₹${a.total_price ?? 0}`,
+					tab: statusToTab(status, a.appointment_date),
+				};
 			});
+			setAppointments(mapped);
+			setFetching(false);
+		}
+		load();
 	}, [user, bookingOpen]);
 
 	// ── Cancel ──────────────────────────────────────────────────────────────────
@@ -286,7 +298,7 @@ export default function AppointmentsPage() {
 			)}
 
 			{/* Reschedule modal */}
-			{rescheduleTarget && (
+			{rescheduleTarget && user && (
 				<RescheduleModal
 					appointmentId={rescheduleTarget.id}
 					locationId={rescheduleTarget.locationId}
