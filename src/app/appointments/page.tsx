@@ -13,7 +13,6 @@ import RescheduleModal from "@/components/appointments/RescheduleModal";
 import Spinner from "@/components/ui/Spinner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
 
 type Appointment = {
 	id: string;
@@ -56,7 +55,6 @@ function statusToTab(status: AppointmentStatus, date: string): AppointmentTab {
 
 export default function AppointmentsPage() {
 	const { user, loading } = useAuth();
-	const router = useRouter();
 
 	const [appointments, setAppointments] = useState<Appointment[]>([]);
 	const [locations, setLocations] = useState<{ label: string; value: string }[]>([]);
@@ -70,10 +68,6 @@ export default function AppointmentsPage() {
 	const [rescheduleTarget, setRescheduleTarget] = useState<Appointment | null>(null);
 
 	useEffect(() => {
-		if (!loading && !user) router.replace("/");
-	}, [user, loading, router]);
-
-	useEffect(() => {
 		supabase
 			.from("locations")
 			.select("id, name")
@@ -83,7 +77,7 @@ export default function AppointmentsPage() {
 	}, []);
 
 	useEffect(() => {
-		if (!user) return;
+		if (!user) { setFetching(false); return; }
 		if (appointments.length === 0) setFetching(true);
 		supabase
 			.from("appointments")
@@ -196,7 +190,7 @@ export default function AppointmentsPage() {
 	const totalCount = appointments.length;
 	const completedCount = appointments.filter((a) => a.status === "completed").length;
 
-	if (loading || !user) return null;
+	if (loading) return null;
 
 	return (
 		<main className='max-w-[1440px] mx-auto px-4 md:px-16 py-8 md:py-12'>
@@ -213,60 +207,68 @@ export default function AppointmentsPage() {
 				</button>
 			</div>
 
-			{/* Stats */}
-			<div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8'>
-				{[
-					{ label: "Total Bookings", value: totalCount, sub: "All time bookings" },
-					{ label: "Upcoming", value: upcomingCount, sub: "Appointments scheduled" },
-					{ label: "Completed", value: completedCount, sub: "Completed appointments" },
-				].map((s) => (
-					<div
-						key={s.label}
-						className='relative border border-gray-200 rounded-[10px] p-5 overflow-hidden'>
-						<p className='text-sm text-gray-500 mb-1'>{s.label}</p>
-						<p className='text-3xl font-bold text-black mb-1'>{s.value}</p>
-						<p className='text-sm text-gray-500'>{s.sub}</p>
-						<div className='absolute bottom-0 left-0 right-0 h-1 bg-brand-green' />
+			{user ? (
+				<>
+					{/* Stats */}
+					<div className='grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8'>
+						{[
+							{ label: "Total Bookings", value: totalCount, sub: "All time bookings" },
+							{ label: "Upcoming", value: upcomingCount, sub: "Appointments scheduled" },
+							{ label: "Completed", value: completedCount, sub: "Completed appointments" },
+						].map((s) => (
+							<div
+								key={s.label}
+								className='relative border border-gray-200 rounded-[10px] p-5 overflow-hidden'>
+								<p className='text-sm text-gray-500 mb-1'>{s.label}</p>
+								<p className='text-3xl font-bold text-black mb-1'>{s.value}</p>
+								<p className='text-sm text-gray-500'>{s.sub}</p>
+								<div className='absolute bottom-0 left-0 right-0 h-1 bg-brand-green' />
+							</div>
+						))}
 					</div>
-				))}
-			</div>
 
-			{/* Tabs */}
-			<AppointmentTabs
-				active={activeTab}
-				onChange={setActiveTab}
-				upcomingCount={upcomingCount}
-			/>
-
-			{/* Location filter */}
-			<div className='mb-5'>
-				<AdminSelect
-					value={location}
-					onChange={setLocation}
-					options={locations}
-					placeholder='All Locations'
-					variant='light'
-					className='w-full sm:w-48'
-				/>
-			</div>
-
-			{/* Appointment list */}
-			{fetching ? (
-				<div className='flex justify-center py-16'>
-					<Spinner size='lg' label='Loading appointments…' />
-				</div>
-			) : filtered.length === 0 ? (
-				<p className='text-gray-400 text-sm py-12 text-center'>No appointments found.</p>
-			) : (
-				filtered.map((a) => (
-					<AppointmentCard
-						key={a.id}
-						{...a}
-						onBookAgain={() => setBookingOpen(true)}
-						onCancel={() => setCancelTarget(a)}
-						onReschedule={() => setRescheduleTarget(a)}
+					{/* Tabs */}
+					<AppointmentTabs
+						active={activeTab}
+						onChange={setActiveTab}
+						upcomingCount={upcomingCount}
 					/>
-				))
+
+					{/* Location filter */}
+					<div className='mb-5'>
+						<AdminSelect
+							value={location}
+							onChange={setLocation}
+							options={locations}
+							placeholder='All Locations'
+							variant='light'
+							className='w-full sm:w-48'
+						/>
+					</div>
+
+					{/* Appointment list */}
+					{fetching ? (
+						<div className='flex justify-center py-16'>
+							<Spinner size='lg' label='Loading appointments…' />
+						</div>
+					) : filtered.length === 0 ? (
+						<p className='text-gray-400 text-sm py-12 text-center'>No appointments found.</p>
+					) : (
+						filtered.map((a) => (
+							<AppointmentCard
+								key={a.id}
+								{...a}
+								onBookAgain={() => setBookingOpen(true)}
+								onCancel={() => setCancelTarget(a)}
+								onReschedule={() => setRescheduleTarget(a)}
+							/>
+						))
+					)}
+				</>
+			) : (
+				<p className='text-gray-400 text-sm py-12 text-center'>
+					Login to view and manage your appointments.
+				</p>
 			)}
 
 			{/* Book new appointment modal */}

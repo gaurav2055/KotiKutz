@@ -9,10 +9,10 @@ export default function ClientShell({ children }: { children: React.ReactNode })
   const isAdmin = pathname.startsWith("/admin");
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       {!isAdmin && <Navbar />}
-      {children}
+      <div className="flex-1">{children}</div>
       {!isAdmin && <Footer />}
-    </>
+    </div>
   );
 }
