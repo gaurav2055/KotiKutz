@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import TeamMemberCard from "@/components/about/TeamMemberCard";
 import { supabase } from "@/lib/supabase";
@@ -13,11 +13,9 @@ type StaffMember = {
   locations: { name: string }[] | null;
 };
 
-const CARDS_VISIBLE = 3;
-
 export default function TeamSlider() {
   const [members, setMembers] = useState<StaffMember[]>([]);
-  const [startIndex, setStartIndex] = useState(0);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     supabase
@@ -26,43 +24,54 @@ export default function TeamSlider() {
       .then(({ data }) => { if (data) setMembers(data as StaffMember[]); });
   }, []);
 
-  const canGoPrev = startIndex > 0;
-  const canGoNext = startIndex + CARDS_VISIBLE < members.length;
-  const visible = members.slice(startIndex, startIndex + CARDS_VISIBLE);
+  function scrollBy(dir: 1 | -1) {
+    const el = scrollRef.current;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>("[data-card]");
+    if (!card) return;
+    const gap = window.innerWidth >= 768 ? 56 : 24;
+    el.scrollBy({ left: dir * (card.offsetWidth + gap), behavior: "smooth" });
+  }
 
   return (
-    <section className="py-16">
-      <div className="max-w-[1440px] mx-auto px-8">
-        <h2 className="text-5xl font-bold text-black mb-10">Meet Our Team</h2>
+    <section className="py-10 md:py-16">
+      <div className="max-w-[1440px] mx-auto px-4 md:px-8 mb-8 md:mb-10">
+        <h2 className="text-4xl md:text-5xl font-bold text-black">Meet Our Team</h2>
       </div>
 
-      <div className="flex items-center justify-center gap-8 px-16">
+      <div className="relative">
         <button
-          onClick={() => setStartIndex((i) => i - 1)}
-          disabled={!canGoPrev}
-          className="shrink-0 cursor-pointer disabled:opacity-30"
+          onClick={() => scrollBy(-1)}
+          className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-10 h-10 rounded-full bg-black/10 hover:bg-black/20 transition-colors"
         >
-          <ChevronLeft className="w-6 h-6 text-black" />
+          <ChevronLeft className="w-5 h-5 text-black" />
         </button>
 
-        <div className="flex gap-14">
-          {visible.map((member) => (
-            <TeamMemberCard
+        <div
+          ref={scrollRef}
+          className="flex gap-6 md:gap-14 overflow-x-auto snap-x snap-mandatory scroll-smooth px-4 md:px-20 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {members.map((member) => (
+            <div
               key={member.id}
-              name={member.name}
-              specialization={member.specialization}
-              image={member.image_url}
-              location={member.locations?.[0]?.name ?? ""}
-            />
+              data-card
+              className="w-[80vw] sm:w-[45vw] lg:w-[410px] h-[449px] shrink-0 snap-center"
+            >
+              <TeamMemberCard
+                name={member.name}
+                specialization={member.specialization}
+                image={member.image_url}
+                location={member.locations?.[0]?.name ?? ""}
+              />
+            </div>
           ))}
         </div>
 
         <button
-          onClick={() => setStartIndex((i) => i + 1)}
-          disabled={!canGoNext}
-          className="shrink-0 cursor-pointer disabled:opacity-30"
+          onClick={() => scrollBy(1)}
+          className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-10 h-10 rounded-full bg-black/10 hover:bg-black/20 transition-colors"
         >
-          <ChevronRight className="w-6 h-6 text-black" />
+          <ChevronRight className="w-5 h-5 text-black" />
         </button>
       </div>
     </section>

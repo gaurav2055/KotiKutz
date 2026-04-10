@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import SiteHero from "@/components/SiteHero";
-import Dropdown from "@/components/ui/Dropdown";
+import AdminSelect from "@/components/ui/AdminSelect";
 import TestimonialCard from "@/components/testimonials/TestimonialCard";
 import WriteReviewModal from "@/components/testimonials/WriteReviewModal";
 import Spinner from "@/components/ui/Spinner";
@@ -91,21 +91,20 @@ export default function TestimonialsPage() {
 
       <div className="max-w-[1229px] mx-auto px-8 py-10">
 
-        {/* Top bar — filter + write review button */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="w-[219px]">
-            <Dropdown
-              value={location}
-              onChange={setLocation}
-              options={locationOptions}
-              placeholder="All Locations"
-              variant="light"
-            />
-          </div>
+        {/* Top bar — write review button above dropdown on mobile, side by side on sm+ */}
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between mb-8">
+          <AdminSelect
+            value={location}
+            onChange={setLocation}
+            options={locationOptions}
+            placeholder="All Locations"
+            variant="light"
+            className="w-full sm:w-[219px]"
+          />
           {user && (
             <button
               onClick={() => setReviewModalOpen(true)}
-              className="bg-brand-dark text-white px-5 py-2.5 rounded-[10px] text-sm font-medium hover:opacity-80 transition-opacity"
+              className="bg-brand-dark text-white px-5 py-2.5 rounded-[10px] text-sm font-medium hover:opacity-80 transition-opacity w-full sm:w-auto"
             >
               + Write a Review
             </button>
@@ -126,7 +125,7 @@ export default function TestimonialsPage() {
               </div>
             )}
             {rest.length > 0 && (
-              <div className="flex gap-6 flex-wrap">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {rest.map((t) => (
                   <TestimonialCard key={t.id} {...t} />
                 ))}

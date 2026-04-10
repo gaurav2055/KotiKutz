@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Pencil, X } from "lucide-react";
 import TextInput from "@/components/ui/TextInput";
-import Dropdown from "@/components/ui/Dropdown";
+import AdminSelect from "@/components/ui/AdminSelect";
 import Button from "@/components/ui/Button";
 import { supabase } from "@/lib/supabase";
 import type { Profile } from "@/app/profile/page";
@@ -106,7 +106,7 @@ export default function PersonalInfoForm({ userId, profile, onSave }: Props) {
   }
 
   return (
-    <div className="rounded-[10px] border border-gray-200 p-8 mb-6">
+    <div className="rounded-[10px] border border-gray-200 p-5 md:p-8 mb-6">
 
       {/* Section title + edit button */}
       <div className="flex items-center justify-between mb-6">
@@ -135,7 +135,7 @@ export default function PersonalInfoForm({ userId, profile, onSave }: Props) {
 
       {/* View mode */}
       {!editing && (
-        <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
           {[
             { label: "First Name",    value: profile.first_name },
             { label: "Last Name",     value: profile.last_name  },
@@ -149,7 +149,7 @@ export default function PersonalInfoForm({ userId, profile, onSave }: Props) {
               <p className="text-base font-medium text-black">{value ?? "—"}</p>
             </div>
           ))}
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <p className="text-sm text-gray-500 mb-1">Preferred Location</p>
             <p className="text-base font-medium text-black">{profile.preferred_location_name ?? "—"}</p>
           </div>
@@ -159,7 +159,7 @@ export default function PersonalInfoForm({ userId, profile, onSave }: Props) {
       {/* Edit mode */}
       {editing && (
         <>
-          <div className="grid grid-cols-2 gap-x-6 gap-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
             <TextInput label="First Name"   value={form.first_name} onChange={(v) => set("first_name", v)} />
             <TextInput label="Last Name"    value={form.last_name}  onChange={(v) => set("last_name", v)} />
             <TextInput label="Phone Number" value={form.phone}      onChange={(v) => set("phone", v)} />
@@ -171,24 +171,26 @@ export default function PersonalInfoForm({ userId, profile, onSave }: Props) {
             <TextInput label="Date of Birth" value={form.dob}    onChange={(v) => set("dob", v)} />
             <div>
               <label className="block text-sm text-gray-600 mb-1">Gender</label>
-              <Dropdown
+              <AdminSelect
                 value={form.gender}
                 onChange={(v) => set("gender", v)}
                 options={GENDER_OPTIONS}
                 placeholder="Choose Gender"
                 variant="light"
+                className="w-full"
               />
             </div>
           </div>
 
           <div className="mt-5">
             <label className="block text-sm text-gray-600 mb-1">Preferred Location</label>
-            <Dropdown
+            <AdminSelect
               value={form.preferred_location_id}
               onChange={(v) => set("preferred_location_id", v)}
               options={locationOptions}
               placeholder="Choose Location"
               variant="light"
+              className="w-full"
             />
           </div>
 

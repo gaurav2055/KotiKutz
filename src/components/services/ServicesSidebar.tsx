@@ -8,9 +8,9 @@ import { supabase } from "@/lib/supabase";
 import type { FiltersState } from "@/app/services/page";
 
 const GENDER_OPTIONS = [
-  { label: "Men",   value: "Men" },
-  { label: "Women", value: "Women" },
-  { label: "Kids",  value: "Kids" },
+  { label: "Male",   value: "Male" },
+  { label: "Female", value: "Female" },
+  { label: "Unisex", value: "Unisex" },
 ];
 
 type Props = {
@@ -36,7 +36,7 @@ export default function ServicesSidebar({ filters, categories, onChange }: Props
   }
 
   return (
-    <aside className="w-[344px] shrink-0 bg-brand-dark py-12 px-6 min-h-screen">
+    <aside className="w-full bg-brand-dark py-6 md:py-12 px-6 overflow-hidden md:h-full md:min-h-screen">
       <h3 className="text-xl font-semibold text-white mb-6">Filter</h3>
 
       <div className="mb-4">

@@ -28,8 +28,8 @@ export default function SiteHero({ title, heroImage, showServicesBtn = true, sho
 			{title && <div className='absolute inset-0 bg-[rgba(41,41,41,0.85)]' />}
 
 			{title && (
-				<div className='absolute inset-0 flex items-center justify-center pb-16'>
-					<h1 className='font-algerian text-[64px] text-brand-green tracking-wide'>
+				<div className='absolute inset-0 flex items-center justify-center pb-16 px-4'>
+					<h1 className='font-algerian text-4xl md:text-[64px] text-brand-green tracking-wide text-center'>
 						{title}
 					</h1>
 				</div>

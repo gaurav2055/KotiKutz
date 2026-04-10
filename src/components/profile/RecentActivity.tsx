@@ -57,7 +57,7 @@ export default function RecentActivity({ userId }: Props) {
   if (activities.length === 0) return null;
 
   return (
-    <div className="rounded-[10px] border border-gray-200 p-8">
+    <div className="rounded-[10px] border border-gray-200 p-5 md:p-8">
 
       {/* Section title */}
       <div className="flex items-center gap-3 mb-6">

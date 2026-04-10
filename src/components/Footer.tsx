@@ -34,13 +34,13 @@ export default function Footer() {
 
   return (
     <footer className="bg-brand-dark text-white w-full">
-      <div className="max-w-[1440px] mx-auto px-10 pt-12 pb-6">
+      <div className="max-w-[1440px] mx-auto px-6 md:px-10 pt-8 md:pt-12 pb-6">
 
         {/* Top Section: Logo, Locations, Contact */}
-        <div className="flex justify-between mb-12">
+        <div className="flex flex-col gap-8 md:flex-row md:justify-between mb-10 md:mb-12">
 
           {/* Logo */}
-          <Image src={LOGO} alt="KotiKutz" width={124} height={47} className="object-contain self-start" />
+          <Image src={LOGO} alt="KotiKutz" width={124} height={47} className="object-contain self-start mx-auto md:mx-0" />
 
           {/* Locations */}
           <div>
@@ -70,7 +70,7 @@ export default function Footer() {
         <hr className="border-white mb-6" />
 
         {/* Bottom Navigation */}
-        <div className="flex justify-center gap-16 text-white text-xl">
+        <div className="flex flex-wrap justify-center gap-6 md:gap-16 text-white text-base md:text-xl">
           <Link href="/"             className="hover:text-brand-green transition-colors">Home</Link>
           <Link href="/about"        className="hover:text-brand-green transition-colors">About Us</Link>
           <Link href="/services"     className="hover:text-brand-green transition-colors">Services</Link>

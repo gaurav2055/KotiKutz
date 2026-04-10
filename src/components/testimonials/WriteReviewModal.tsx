@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Modal from "@/components/ui/Modal";
-import Dropdown from "@/components/ui/Dropdown";
+import AdminSelect from "@/components/ui/AdminSelect";
 import { supabase } from "@/lib/supabase";
 
 type Props = {
@@ -82,12 +82,13 @@ export default function WriteReviewModal({ userId, reviewerName, onClose, onSubm
         {/* Location */}
         <div>
           <label className="block text-sm text-gray-600 mb-1">Location visited</label>
-          <Dropdown
+          <AdminSelect
             value={locationId}
             onChange={setLocationId}
             options={locationOptions}
             placeholder="Choose Location"
             variant="light"
+            className="w-full"
           />
         </div>
 

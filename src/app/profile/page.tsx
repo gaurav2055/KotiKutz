@@ -85,8 +85,8 @@ export default function ProfilePage() {
   if (!user || !profile) return null;
 
   return (
-    <main className="max-w-[1440px] mx-auto px-16 py-12">
-      <div className="flex gap-8 items-start">
+    <main className="max-w-[1440px] mx-auto px-4 md:px-16 py-8 md:py-12">
+      <div className="flex flex-col md:flex-row gap-8 items-start">
         <ProfileSidebar
           userId={user.id}
           profile={profile}
@@ -100,7 +100,7 @@ export default function ProfilePage() {
             profile={profile}
             onSave={updateProfile}
           />
-          <NotificationsCard />
+          <NotificationsCard userId={user.id} />
           <RecentActivity userId={user.id} />
         </div>
       </div>

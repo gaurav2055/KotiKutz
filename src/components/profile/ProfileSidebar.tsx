@@ -40,7 +40,7 @@ export default function ProfileSidebar({ userId, profile, totalVisits, onAvatarU
   }
 
   return (
-    <aside className="w-[240px] shrink-0">
+    <aside className="w-full md:w-[240px] md:shrink-0">
 
       {/* Profile card */}
       <div className="bg-brand-dark rounded-[10px] overflow-hidden mb-3">

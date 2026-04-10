@@ -22,13 +22,18 @@ export default function Modal({
 
   return (
     <>
+      {/* Backdrop */}
       <div className={`fixed inset-0 ${t.backdrop} z-40`} onClick={onClose} />
-      <div
-        className={`fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-50 ${t.panel} ${width} p-8 ${
-          scrollable ? "max-h-[90vh] overflow-y-auto" : ""
-        }`}
-      >
-        {children}
+
+      {/* Centering container — pointer-events-none so clicks fall through to backdrop */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <div
+          className={`${t.panel} ${width} max-w-full p-6 md:p-8 pointer-events-auto ${
+            scrollable ? "max-h-[90vh] overflow-y-auto" : ""
+          }`}
+        >
+          {children}
+        </div>
       </div>
     </>
   );

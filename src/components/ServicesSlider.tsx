@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ServiceCard from "@/components/ServiceCard";
-import Skeleton from "@/components/ui/Skeleton";
 import { supabase } from "@/lib/supabase";
 
 type Service = {
@@ -14,26 +13,20 @@ type Service = {
   image_url: string;
 };
 
-const CARDS_VISIBLE = 3;
-
 function SliderSkeleton() {
   return (
-    <div className="flex items-center justify-center gap-8 px-16">
-      <ChevronLeft className="w-6 h-6 text-white opacity-30 shrink-0" />
-      <div className="flex gap-14">
-        {Array.from({ length: CARDS_VISIBLE }).map((_, i) => (
-          <Skeleton key={i} className="w-[410px] h-[449px] rounded-[15px] bg-gray-600" />
-        ))}
-      </div>
-      <ChevronRight className="w-6 h-6 text-white opacity-30 shrink-0" />
+    <div className="flex gap-6 md:gap-14 px-4 md:px-20 overflow-hidden">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="w-[80vw] sm:w-[45vw] lg:w-[410px] h-[449px] shrink-0 rounded-[15px] bg-gray-300 animate-pulse" />
+      ))}
     </div>
   );
 }
 
 export default function ServicesSlider() {
-  const [services,  setServices]  = useState<Service[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [startIndex, setStartIndex] = useState(0);
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     supabase
@@ -46,41 +39,52 @@ export default function ServicesSlider() {
       });
   }, []);
 
+  function scrollBy(dir: 1 | -1) {
+    const el = scrollRef.current;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>("[data-card]");
+    if (!card) return;
+    const gap = window.innerWidth >= 768 ? 56 : 24; // gap-14 on md, gap-6 on mobile
+    el.scrollBy({ left: dir * (card.offsetWidth + gap), behavior: "smooth" });
+  }
+
   if (loading) return <SliderSkeleton />;
 
-  const canGoPrev = startIndex > 0;
-  const canGoNext = startIndex + CARDS_VISIBLE < services.length;
-  const visible   = services.slice(startIndex, startIndex + CARDS_VISIBLE);
-
   return (
-    <div className="flex items-center justify-center gap-8 px-16">
+    <div className="relative">
       <button
-        onClick={() => setStartIndex((i) => i - 1)}
-        disabled={!canGoPrev}
-        className="shrink-0 cursor-pointer disabled:opacity-30"
+        onClick={() => scrollBy(-1)}
+        className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-10 h-10 rounded-full bg-black/30 hover:bg-black/50 transition-colors"
       >
-        <ChevronLeft className="w-6 h-6 text-white" />
+        <ChevronLeft className="w-5 h-5 text-white" />
       </button>
 
-      <div className="flex gap-14">
-        {visible.map((service) => (
-          <ServiceCard
+      <div
+        ref={scrollRef}
+        className="flex gap-6 md:gap-14 overflow-x-auto snap-x snap-mandatory scroll-smooth px-4 md:px-20 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {services.map((service) => (
+          <div
             key={service.id}
-            image={service.image_url}
-            name={service.name}
-            price={`₹${service.price}/-`}
-            location="All"
-            description={service.description}
-          />
+            data-card
+            className="w-[80vw] sm:w-[45vw] lg:w-[410px] h-[449px] shrink-0 snap-center"
+          >
+            <ServiceCard
+              image={service.image_url}
+              name={service.name}
+              price={`₹${service.price}/-`}
+              location="All"
+              description={service.description}
+            />
+          </div>
         ))}
       </div>
 
       <button
-        onClick={() => setStartIndex((i) => i + 1)}
-        disabled={!canGoNext}
-        className="shrink-0 cursor-pointer disabled:opacity-30"
+        onClick={() => scrollBy(1)}
+        className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-10 h-10 rounded-full bg-black/30 hover:bg-black/50 transition-colors"
       >
-        <ChevronRight className="w-6 h-6 text-white" />
+        <ChevronRight className="w-5 h-5 text-white" />
       </button>
     </div>
   );
