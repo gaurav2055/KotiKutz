@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       .from("appointments")
       .select(`
         id, appointment_date, time_slot, status, total_price,
-        locations(name), staff(name), appointment_services(services(name))
+        locations(name), staff(profiles!staff_id_fkey(name, first_name, last_name)), appointment_services(services(name))
       `)
       .eq("user_id", userId)
       .order("appointment_date", { ascending: false })

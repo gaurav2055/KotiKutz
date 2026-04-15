@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import AdminSidebar from "@/components/admin/AdminSidebar";
@@ -34,11 +34,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [role, setRole] = useState<AdminRole | null>(null);
   const [userName, setUserName] = useState<string>("");
-  const [pathname, setPathname] = useState("");
-
-  useEffect(() => {
-    setPathname(window.location.pathname);
-  }, []);
+  const pathname = usePathname();
 
   useEffect(() => {
     if (loading) return;

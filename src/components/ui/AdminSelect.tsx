@@ -12,6 +12,7 @@ type Props = {
   placeholder?: string;
   className?: string;
   variant?: "dark" | "light";
+  emptyIsValid?: boolean; // when true, empty value is styled as a real selection, not a placeholder
 };
 
 export default function AdminSelect({
@@ -21,6 +22,7 @@ export default function AdminSelect({
   placeholder = "All",
   className = "",
   variant = "dark",
+  emptyIsValid = false,
 }: Props) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -61,7 +63,7 @@ export default function AdminSelect({
         onClick={() => setOpen((o) => !o)}
         className={`w-full flex items-center gap-2 text-sm rounded-lg px-3 py-2 outline-none transition-colors min-w-[140px] ${buttonClass}`}
       >
-        <span className={`flex-1 text-left truncate ${!value ? placeholderClass : ""}`}>{label}</span>
+        <span className={`flex-1 text-left truncate ${!value && !emptyIsValid ? placeholderClass : ""}`}>{label}</span>
         <ChevronDown size={14} className={`shrink-0 transition-transform ${open ? "rotate-180" : ""} ${isDark ? "text-white/50" : "text-gray-400"}`} />
       </button>
 

@@ -9,7 +9,7 @@ export async function GET() {
   }
   const { data, error } = await supabaseAdmin
     .from("services")
-    .select("*")
+    .select("id, name, category, gender, price, description, image_url, location_id")
     .order("category")
     .order("name");
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -43,10 +43,23 @@ export async function POST(request: NextRequest) {
 
 export async function PATCH(request: NextRequest) {
   const caller = await getAdminCaller();
-  if (!requireRole(caller, "super_admin")) {
+  if (!requireRole(caller, "manager")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id, ...updates } = await request.json();
+
+  // Manager: submit an edit change request instead of direct update
+  if (caller!.role === "manager") {
+    const { error } = await supabaseAdmin.from("change_requests").insert({
+      type: "service_edit",
+      payload: { id, ...updates },
+      requested_by: caller!.userId,
+    });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ pending: true });
+  }
+
+  // Super admin: direct update
   const { data, error } = await supabaseAdmin.from("services").update(updates).eq("id", id).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data });

@@ -4,21 +4,36 @@ import { useEffect, useState, useCallback } from "react";
 import { Plus, Pencil, UserMinus } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 import { supabase } from "@/lib/supabase";
+import AdminTable, { type ColumnDef } from "@/components/admin/AdminTable";
+import AdminModal from "@/components/admin/AdminModal";
+import AdminSelect from "@/components/ui/AdminSelect";
+import TableImage from "@/components/admin/TableImage";
 
 interface StaffMember {
   id: string;
   name: string | null;
-  first_name: string | null;
-  last_name: string | null;
+  bio: string | null;
+  specialization: string | null;
+  avatar_url: string | null;
+  location_id: string | null;
+  location_name: string | null;
   email: string | null;
   role: string;
-  preferred_location_id: string | null;
-  locations: { name: string } | null;
+  first_name: string | null;
+  last_name: string | null;
 }
 
 interface Location { id: string; name: string; }
 
 const ROLE_OPTIONS = ["employee", "manager", "super_admin"];
+
+const ROLE_BADGE: Record<string, string> = {
+  super_admin: "bg-purple-500/20 text-purple-400",
+  manager:     "bg-blue-500/20 text-blue-400",
+  employee:    "bg-white/10 text-white/60",
+};
+
+type AddMode = "create" | "link";
 
 export default function StaffPage() {
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -27,8 +42,9 @@ export default function StaffPage() {
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState<StaffMember | null>(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ email: "", name: "", role: "employee", locationId: "" });
   const [error, setError] = useState("");
+  const [addMode, setAddMode] = useState<AddMode>("create");
+  const [form, setForm] = useState({ email: "", name: "", role: "employee", locationId: "" });
 
   const fetchStaff = useCallback(async () => {
     setLoading(true);
@@ -45,6 +61,7 @@ export default function StaffPage() {
 
   function openCreate() {
     setEditTarget(null);
+    setAddMode("create");
     setForm({ email: "", name: "", role: "employee", locationId: locations[0]?.id ?? "" });
     setError("");
     setShowForm(true);
@@ -52,7 +69,7 @@ export default function StaffPage() {
 
   function openEdit(s: StaffMember) {
     setEditTarget(s);
-    setForm({ email: s.email ?? "", name: s.name ?? "", role: s.role, locationId: s.preferred_location_id ?? "" });
+    setForm({ email: s.email ?? "", name: s.name ?? "", role: s.role, locationId: s.location_id ?? "" });
     setError("");
     setShowForm(true);
   }
@@ -60,6 +77,7 @@ export default function StaffPage() {
   async function handleSave() {
     setSaving(true);
     setError("");
+
     if (editTarget) {
       const res = await fetch("/api/admin/staff", {
         method: "PATCH",
@@ -71,10 +89,18 @@ export default function StaffPage() {
       const res = await fetch("/api/admin/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: form.email, name: form.name, role: form.role, locationId: form.locationId }),
+        body: JSON.stringify({
+          email: form.email,
+          name: addMode === "create" ? form.name : undefined,
+          role: form.role,
+          locationId: form.locationId,
+          mode: addMode,
+          redirectTo: `${window.location.origin}/auth/callback`,
+        }),
       });
       if (!res.ok) { const j = await res.json(); setError(j.error); setSaving(false); return; }
     }
+
     setSaving(false);
     setShowForm(false);
     fetchStaff();
@@ -89,89 +115,72 @@ export default function StaffPage() {
     fetchStaff();
   }
 
+  const columns: ColumnDef<StaffMember>[] = [
+    {
+      label: "",
+      headerClassName: "w-12",
+      render: (s) => s.avatar_url
+        ? <TableImage src={s.avatar_url} alt={s.name ?? "Staff"} />
+        : <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white/30 text-xs shrink-0">
+            {(s.name ?? s.email ?? "?")[0].toUpperCase()}
+          </div>,
+    },
+    {
+      label: "Name",
+      render: (s) => {
+        const display = s.first_name ? `${s.first_name} ${s.last_name ?? ""}`.trim() : s.name ?? "—";
+        return (
+          <div>
+            <p>{display}</p>
+            {s.specialization && <p className="text-white/40 text-xs mt-0.5">{s.specialization}</p>}
+          </div>
+        );
+      },
+    },
+    { label: "Email",    render: (s) => <span className="text-white/60">{s.email ?? "—"}</span> },
+    {
+      label: "Role",
+      render: (s) => (
+        <span className={`px-2 py-0.5 rounded-full text-xs capitalize ${ROLE_BADGE[s.role] ?? "bg-white/10 text-white/60"}`}>
+          {s.role.replace("_", " ")}
+        </span>
+      ),
+    },
+    { label: "Location", render: (s) => <span className="text-white/60">{s.location_name ?? "—"}</span> },
+    {
+      label: "Actions",
+      render: (s) => (
+        <div className="flex gap-2">
+          <button title="Edit staff member" onClick={() => openEdit(s)} className="p-1.5 text-white/40 hover:text-white transition-colors"><Pencil size={14} /></button>
+          <button title="Remove staff member" onClick={() => handleRemove(s.id)} className="p-1.5 text-red-400/60 hover:text-red-400 transition-colors"><UserMinus size={14} /></button>
+        </div>
+      ),
+    },
+  ];
+
   if (loading) return <div className="flex justify-center pt-20"><Spinner size="lg" /></div>;
 
   return (
     <div>
       <div className="flex justify-end mb-6">
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-2 px-4 py-2 bg-brand-green text-black text-sm font-medium rounded-lg hover:opacity-90 transition-opacity"
-        >
+        <button onClick={openCreate}
+          className="flex items-center gap-2 px-4 py-2 bg-brand-green text-black text-sm font-medium rounded-lg hover:opacity-90 transition-opacity">
           <Plus size={16} /> Add Staff Member
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/10">
-        <table className="w-full text-sm text-white">
-          <thead>
-            <tr className="border-b border-white/10 text-white/40 text-left">
-              <th className="px-4 py-3 font-medium">Name</th>
-              <th className="px-4 py-3 font-medium">Email</th>
-              <th className="px-4 py-3 font-medium">Role</th>
-              <th className="px-4 py-3 font-medium">Location</th>
-              <th className="px-4 py-3 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {staff.map((s) => (
-              <tr key={s.id} className="border-b border-white/5 hover:bg-white/3 transition-colors">
-                <td className="px-4 py-3">{s.first_name ? `${s.first_name} ${s.last_name ?? ""}`.trim() : s.name ?? "—"}</td>
-                <td className="px-4 py-3 text-white/60">{s.email ?? "—"}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs capitalize ${
-                    s.role === "super_admin" ? "bg-purple-500/20 text-purple-400" :
-                    s.role === "manager" ? "bg-blue-500/20 text-blue-400" :
-                    "bg-white/10 text-white/60"
-                  }`}>{s.role.replace("_", " ")}</span>
-                </td>
-                <td className="px-4 py-3 text-white/60">{s.locations?.name ?? "—"}</td>
-                <td className="px-4 py-3">
-                  <div className="flex gap-2">
-                    <button onClick={() => openEdit(s)} className="p-1.5 text-white/40 hover:text-white transition-colors"><Pencil size={14} /></button>
-                    <button onClick={() => handleRemove(s.id)} className="p-1.5 text-red-400/60 hover:text-red-400 transition-colors"><UserMinus size={14} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AdminTable
+        columns={columns}
+        rows={staff}
+        keyExtractor={(s) => s.id}
+        emptyMessage="No staff members found."
+      />
 
-      {/* Add/Edit Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-md space-y-4">
-            <h2 className="text-white font-semibold text-lg">{editTarget ? "Edit Staff Member" : "Add Staff Member"}</h2>
-            {!editTarget && (
-              <div>
-                <label className="text-white/60 text-sm block mb-1">Email</label>
-                <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]" placeholder="staff@example.com" />
-              </div>
-            )}
-            <div>
-              <label className="text-white/60 text-sm block mb-1">Full Name</label>
-              <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]" placeholder="John Doe" />
-            </div>
-            <div>
-              <label className="text-white/60 text-sm block mb-1">Role</label>
-              <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]">
-                {ROLE_OPTIONS.map((r) => <option key={r} value={r}>{r.replace("_", " ")}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-white/60 text-sm block mb-1">Location</label>
-              <select value={form.locationId} onChange={(e) => setForm({ ...form, locationId: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]">
-                <option value="">— Unassigned —</option>
-                {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-              </select>
-            </div>
-            {error && <p className="text-red-400 text-sm">{error}</p>}
-            {!editTarget && <p className="text-white/40 text-xs">A password reset email will be sent to the new staff member.</p>}
+        <AdminModal
+          title={editTarget ? "Edit Staff Member" : "Add Staff Member"}
+          onClose={() => setShowForm(false)}
+          footer={
             <div className="flex gap-3 justify-end">
               <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm text-white/60 hover:text-white transition-colors">Cancel</button>
               <button onClick={handleSave} disabled={saving}
@@ -179,8 +188,81 @@ export default function StaffPage() {
                 {saving ? "Saving…" : "Save"}
               </button>
             </div>
+          }
+        >
+          {/* Mode toggle — only shown when creating */}
+          {!editTarget && (
+            <div className="flex bg-white/5 rounded-lg p-1 gap-1">
+              {(["create", "link"] as AddMode[]).map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => { setAddMode(m); setError(""); }}
+                  className={`flex-1 py-1.5 text-sm rounded-md transition-colors ${addMode === m ? "bg-brand-green text-black font-medium" : "text-white/50 hover:text-white"}`}
+                >
+                  {m === "create" ? "Create Account" : "Link Existing Account"}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div>
+            <label className="text-white/60 text-sm block mb-1">Email</label>
+            <input
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+              className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]"
+              placeholder="staff@example.com"
+              readOnly={!!editTarget}
+            />
           </div>
-        </div>
+
+          {/* Name field only for "create" mode or editing */}
+          {(!editTarget && addMode === "create" || editTarget) && (
+            <div>
+              <label className="text-white/60 text-sm block mb-1">Full Name</label>
+              <input
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]"
+                placeholder="John Doe"
+              />
+            </div>
+          )}
+
+          <div>
+            <label className="text-white/60 text-sm block mb-1">Role</label>
+            <AdminSelect
+              value={form.role}
+              onChange={(v) => setForm({ ...form, role: v || "employee" })}
+              options={ROLE_OPTIONS.map((r) => ({ label: r.replace("_", " "), value: r }))}
+              placeholder="Select role"
+              className="w-full"
+            />
+          </div>
+
+          <div>
+            <label className="text-white/60 text-sm block mb-1">Location</label>
+            <AdminSelect
+              value={form.locationId}
+              onChange={(v) => setForm({ ...form, locationId: v })}
+              options={locations.map((l) => ({ label: l.name, value: l.id }))}
+              placeholder="— Unassigned —"
+              className="w-full"
+              emptyIsValid
+            />
+          </div>
+
+          {error && <p className="text-red-400 text-sm">{error}</p>}
+
+          {!editTarget && (
+            <p className="text-white/30 text-xs">
+              {addMode === "create"
+                ? "A password reset email will be sent so the staff member can set their own password."
+                : "The staff member must already have a KotiKutz account before being linked here."}
+            </p>
+          )}
+        </AdminModal>
       )}
     </div>
   );

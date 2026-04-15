@@ -15,6 +15,17 @@ export async function GET() {
   return NextResponse.json({ data });
 }
 
+export async function POST(request: NextRequest) {
+  const caller = await getAdminCaller();
+  if (!requireRole(caller, "super_admin")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const body = await request.json();
+  const { data, error } = await supabaseAdmin.from("locations").insert(body).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ data }, { status: 201 });
+}
+
 export async function PATCH(request: NextRequest) {
   const caller = await getAdminCaller();
   if (!requireRole(caller, "super_admin")) {
@@ -24,4 +35,15 @@ export async function PATCH(request: NextRequest) {
   const { data, error } = await supabaseAdmin.from("locations").update(updates).eq("id", id).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ data });
+}
+
+export async function DELETE(request: NextRequest) {
+  const caller = await getAdminCaller();
+  if (!requireRole(caller, "super_admin")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const { id } = await request.json();
+  const { error } = await supabaseAdmin.from("locations").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ success: true });
 }

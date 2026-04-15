@@ -7,9 +7,8 @@ import { supabase } from "@/lib/supabase";
 
 type StaffMember = {
   id: string;
-  name: string;
-  specialization: string;
-  image_url: string;
+  specialization: string | null;
+  profiles: { name: string | null; first_name: string | null; last_name: string | null; avatar_url: string | null } | null;
   locations: { name: string }[] | null;
 };
 
@@ -20,7 +19,7 @@ export default function TeamSlider() {
   useEffect(() => {
     supabase
       .from("staff")
-      .select("id, name, specialization, image_url, locations(name)")
+      .select("id, specialization, profiles!staff_id_fkey(name, first_name, last_name, avatar_url), locations(name)")
       .then(({ data }) => { if (data) setMembers(data as StaffMember[]); });
   }, []);
 
@@ -58,9 +57,9 @@ export default function TeamSlider() {
               className="w-[80vw] sm:w-[45vw] lg:w-[410px] h-[449px] shrink-0 snap-center"
             >
               <TeamMemberCard
-                name={member.name}
-                specialization={member.specialization}
-                image={member.image_url}
+                name={member.profiles?.first_name ? `${member.profiles.first_name} ${member.profiles.last_name ?? ""}`.trim() : member.profiles?.name ?? ""}
+                specialization={member.specialization ?? ""}
+                image={member.profiles?.avatar_url ?? ""}
                 location={member.locations?.[0]?.name ?? ""}
               />
             </div>

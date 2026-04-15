@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       cancellation_requested, cancellation_reason, cancellation_requested_by,
       profiles!appointments_user_id_fkey(name, first_name, last_name, email, phone),
       locations(id, name),
-      staff(name),
+      staff(profiles!staff_id_fkey(name, first_name, last_name)),
       appointment_services(services(name))
     `, { count: "exact" })
     .order("appointment_date", { ascending: false })
@@ -91,14 +91,14 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ success: true });
   }
 
-  if (action === "complete") {
-    // Any role can mark an appointment as done
-    if (appt.status === "cancelled" || appt.status === "completed") {
-      return NextResponse.json({ error: "Cannot mark this appointment as done" }, { status: 400 });
+  if (action === "complete" || action === "no_show") {
+    const terminal = ["cancelled", "completed", "no_show"];
+    if (terminal.includes(appt.status)) {
+      return NextResponse.json({ error: "Cannot update this appointment" }, { status: 400 });
     }
     const { error } = await supabaseAdmin
       .from("appointments")
-      .update({ status: "completed" })
+      .update({ status: action === "complete" ? "completed" : "no_show" })
       .eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     return NextResponse.json({ success: true });

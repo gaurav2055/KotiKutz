@@ -7,65 +7,109 @@ export async function GET() {
   if (!requireRole(caller, "super_admin")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
   const { data, error } = await supabaseAdmin
-    .from("profiles")
-    .select("id, name, first_name, last_name, email, role, preferred_location_id, avatar_url, locations!profiles_preferred_location_id_fkey(name)")
-    .in("role", ["employee", "manager", "super_admin"])
-    .order("role")
-    .order("name");
+    .from("staff")
+    .select(`
+      id, bio, specialization, location_id,
+      profiles!staff_id_fkey(email, role, first_name, last_name, name, avatar_url),
+      locations(name)
+    `)
+    .order("id");
+
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  const staffData = await supabaseAdmin
-    .from("staff")
-    .select("id, name, bio, specialization, image_url, location_id");
+  // Flatten nested profile and location fields
+  const flattened = (data ?? []).map((s: any) => {
+    const p = s.profiles ?? {};
+    const displayName = p.first_name
+      ? `${p.first_name} ${p.last_name ?? ""}`.trim()
+      : p.name ?? null;
+    return {
+      id:             s.id,
+      name:           displayName,
+      bio:            s.bio,
+      specialization: s.specialization,
+      avatar_url:     p.avatar_url ?? null,
+      location_id:    s.location_id,
+      location_name:  s.locations?.name ?? null,
+      email:          p.email ?? null,
+      role:           p.role ?? "employee",
+      first_name:     p.first_name ?? null,
+      last_name:      p.last_name ?? null,
+    };
+  });
 
-  return NextResponse.json({ data, staffData: staffData.data });
+  return NextResponse.json({ data: flattened });
 }
 
-// POST: create a new employee/manager account
 export async function POST(request: NextRequest) {
   const caller = await getAdminCaller();
   if (!requireRole(caller, "super_admin")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { email, name, role, locationId, specialization, bio } = await request.json();
-  if (!email || !name || !role || !locationId) {
+  const { email, name, role, locationId, mode, redirectTo } = await request.json();
+
+  if (!email || !role || !locationId || !mode) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
-  // Create auth user (sends invite/magic link email)
-  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-    email,
-    email_confirm: true,
-    user_metadata: { full_name: name, given_name: name.split(" ")[0], family_name: name.split(" ").slice(1).join(" ") },
+  if (mode === "link") {
+    // Find existing profile by email
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .select("id, first_name, last_name, name")
+      .eq("email", email)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "No account found for this email. Ask the staff member to sign up first." }, { status: 404 });
+    }
+
+    // Check if already a staff member
+    const { data: existing } = await supabaseAdmin
+      .from("staff")
+      .select("id")
+      .eq("id", profile.id)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({ error: "This user is already a staff member." }, { status: 409 });
+    }
+
+    await supabaseAdmin.from("profiles").update({ role, preferred_location_id: locationId }).eq("id", profile.id);
+    const { error: insertError } = await supabaseAdmin.from("staff").insert({ id: profile.id, location_id: locationId });
+    if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
+
+    return NextResponse.json({ success: true });
+  }
+
+  // mode === "create": invite new user — creates account AND sends invite email
+  if (!name) return NextResponse.json({ error: "Name is required when creating a new account" }, { status: 400 });
+
+  const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+    redirectTo: redirectTo ?? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/callback`,
+    data: {
+      full_name: name,
+      given_name: name.split(" ")[0],
+      family_name: name.split(" ").slice(1).join(" "),
+    },
   });
 
   if (authError) return NextResponse.json({ error: authError.message }, { status: 500 });
 
   const userId = authData.user.id;
 
-  // Update profile with role and location
-  await supabaseAdmin
-    .from("profiles")
-    .update({ role, preferred_location_id: locationId, name })
-    .eq("id", userId);
+  await supabaseAdmin.from("profiles").update({
+    role,
+    preferred_location_id: locationId,
+    first_name: name.split(" ")[0],
+    last_name:  name.split(" ").slice(1).join(" ") || null,
+  }).eq("id", userId);
 
-  // Determine which location this staff member belongs to for the staff table
-  const locationData = await supabaseAdmin.from("locations").select("id").eq("id", locationId).single();
-
-  // Create staff record
-  if (locationData.data) {
-    await supabaseAdmin.from("staff").insert({
-      name,
-      bio: bio ?? null,
-      specialization: specialization ?? null,
-      location_id: locationId,
-    });
-  }
-
-  // Send password reset (so they can set their own password)
-  await supabaseAdmin.auth.admin.generateLink({ type: "recovery", email });
+  const { error: staffError } = await supabaseAdmin.from("staff").insert({ id: userId, location_id: locationId });
+  if (staffError) return NextResponse.json({ error: staffError.message }, { status: 500 });
 
   return NextResponse.json({ success: true, userId }, { status: 201 });
 }
@@ -76,13 +120,26 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { userId, role, locationId, ...profileUpdates } = await request.json();
-  const updates: Record<string, unknown> = { ...profileUpdates };
-  if (role) updates.role = role;
-  if (locationId !== undefined) updates.preferred_location_id = locationId;
+  const { userId, role, locationId } = await request.json();
 
-  const { error } = await supabaseAdmin.from("profiles").update(updates).eq("id", userId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // Update profile (role + location)
+  const profileUpdates: Record<string, unknown> = {};
+  if (role) profileUpdates.role = role;
+  if (locationId !== undefined) profileUpdates.preferred_location_id = locationId;
+
+  if (Object.keys(profileUpdates).length > 0) {
+    const { error } = await supabaseAdmin.from("profiles").update(profileUpdates).eq("id", userId);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Update staff record (location only — name comes from profiles)
+  const staffUpdates: Record<string, unknown> = {};
+  if (locationId !== undefined) staffUpdates.location_id = locationId;
+
+  if (Object.keys(staffUpdates).length > 0) {
+    await supabaseAdmin.from("staff").update(staffUpdates).eq("id", userId);
+  }
+
   return NextResponse.json({ success: true });
 }
 
@@ -94,8 +151,13 @@ export async function DELETE(request: NextRequest) {
 
   const { userId } = await request.json();
 
-  // Downgrade to customer role (soft delete — don't delete auth user)
-  const { error } = await supabaseAdmin.from("profiles").update({ role: "customer" }).eq("id", userId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  // Remove staff record
+  const { error: staffError } = await supabaseAdmin.from("staff").delete().eq("id", userId);
+  if (staffError) return NextResponse.json({ error: staffError.message }, { status: 500 });
+
+  // Downgrade profile role to customer
+  const { error: profileError } = await supabaseAdmin.from("profiles").update({ role: "customer" }).eq("id", userId);
+  if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
+
   return NextResponse.json({ success: true });
 }

@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { CalendarDays, IndianRupee, TrendingDown, Users, BarChart2, Receipt } from "lucide-react";
 import Skeleton from "@/components/ui/Skeleton";
+import AdminSelect from "@/components/ui/AdminSelect";
 
 interface Analytics {
   totalBookings: number;
@@ -126,14 +127,12 @@ export default function DashboardPage() {
       {/* Location filter (super_admin only) */}
       {role === "super_admin" && (
         <div>
-          <select
+          <AdminSelect
             value={filterLocation}
-            onChange={(e) => setFilterLocation(e.target.value)}
-            className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]"
-          >
-            <option value="">All Locations</option>
-            {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
-          </select>
+            onChange={setFilterLocation}
+            options={locations.map((l) => ({ label: l.name, value: l.id }))}
+            placeholder="All Locations"
+          />
         </div>
       )}
 
