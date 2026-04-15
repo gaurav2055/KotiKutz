@@ -22,7 +22,7 @@ type RawAppointment = {
 	total_price: number | null;
 	staff_id: string | null;
 	locations: { id: string; name: string } | null;
-	staff: { name: string } | null;
+	staff: { profiles: { name: string | null; first_name: string | null; last_name: string | null } | null } | null;
 	appointment_services: Array<{ services: { name: string } | null }>;
 };
 
@@ -98,7 +98,7 @@ export default function AppointmentsPage() {
 					`
           id, appointment_date, time_slot, status, total_price, staff_id,
           locations(id, name),
-          staff(name),
+          staff(profiles!staff_id_fkey(name, first_name, last_name)),
           appointment_services(services(name))
         `,
 				)
@@ -127,7 +127,7 @@ export default function AppointmentsPage() {
 					location: a.locations?.name ?? "",
 					locationId: a.locations?.id ?? "",
 					staffId: a.staff_id ?? null,
-					stylist: a.staff?.name ?? "Any Available",
+					stylist: (() => { const p = a.staff?.profiles; return p?.first_name ? `${p.first_name} ${p.last_name ?? ""}`.trim() : p?.name ?? "Any Available"; })(),
 					time: a.time_slot,
 					status,
 					price: `₹${a.total_price ?? 0}`,

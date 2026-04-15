@@ -65,12 +65,15 @@ export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext
 
     supabase
       .from("staff")
-      .select("id, name")
+      .select("id, profiles!staff_id_fkey(name, first_name, last_name)")
       .eq("location_id", form.locationId)
-      .order("name")
       .then(({ data }) => {
         const options: StaffOption[] = [];
-        if (data) data.forEach((s) => options.push({ label: s.name, value: s.id }));
+        if (data) data.forEach((s: any) => {
+          const p = s.profiles;
+          const label = p?.first_name ? `${p.first_name} ${p.last_name ?? ""}`.trim() : p?.name ?? "Stylist";
+          options.push({ label, value: s.id });
+        });
         setStaffOptions(options);
       });
 

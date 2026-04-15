@@ -29,7 +29,7 @@ export default function RecentActivity({ userId }: Props) {
       .select(`
         id, appointment_date, total_price,
         locations(name),
-        staff(name),
+        staff(profiles!staff_id_fkey(name, first_name, last_name)),
         appointment_services(services(name))
       `)
       .eq("user_id", userId)
@@ -46,7 +46,7 @@ export default function RecentActivity({ userId }: Props) {
                 .filter(Boolean)
                 .join(" + ") || "Service",
             location: a.locations?.name ?? "—",
-            staffName: a.staff?.name ?? "Any Available",
+            staffName: (() => { const p = a.staff?.profiles; return p?.first_name ? `${p.first_name} ${p.last_name ?? ""}`.trim() : p?.name ?? "Any Available"; })(),
             date: formatDate(a.appointment_date),
             amount: `₹${a.total_price ?? 0}`,
           }))

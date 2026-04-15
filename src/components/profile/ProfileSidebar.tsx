@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { CalendarDays, KeyRound, Trash2, ChevronRight, Camera } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Profile } from "@/app/profile/page";
 
 type ProfileSidebarProps = {
@@ -15,9 +16,40 @@ type ProfileSidebarProps = {
   onChangePassword: () => void;
 };
 
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-4 h-4 shrink-0">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+    </svg>
+  );
+}
+
 export default function ProfileSidebar({ userId, profile, totalVisits, onAvatarUpdate, onChangePassword }: ProfileSidebarProps) {
+  const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
+  const [linkingGoogle, setLinkingGoogle] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const googleLinked = user?.identities?.some((i) => i.provider === "google") ?? false;
+
+  async function handleLinkGoogle() {
+    setLinkingGoogle(true);
+    setGoogleError(null);
+    const { error } = await supabase.auth.linkIdentity({
+      provider: "google",
+      options: { redirectTo: window.location.href },
+    });
+    if (error) {
+      setGoogleError(error.message === "manual_linking_disabled"
+        ? "Google linking is not enabled. Please contact support."
+        : error.message);
+      setLinkingGoogle(false);
+    }
+  }
 
   const displayName = profile.first_name && profile.last_name
     ? `${profile.first_name} ${profile.last_name}`
@@ -28,11 +60,21 @@ export default function ProfileSidebar({ userId, profile, totalVisits, onAvatarU
     if (!file) return;
     setUploading(true);
 
-    const path = `${userId}/avatar.${file.name.split(".").pop()}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    const ext = file.name.split(".").pop();
+    const newPath = `${userId}/avatar.${ext}`;
+
+    // Delete old file first if the extension changed (upsert alone won't remove it)
+    if (profile.avatar_url) {
+      const oldPath = profile.avatar_url.split("/storage/v1/object/public/avatars/")[1];
+      if (oldPath && oldPath !== newPath) {
+        await supabase.storage.from("avatars").remove([oldPath]);
+      }
+    }
+
+    const { error } = await supabase.storage.from("avatars").upload(newPath, file, { upsert: true });
 
     if (!error) {
-      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(newPath);
       await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("id", userId);
       onAvatarUpdate(publicUrl);
     }
@@ -110,14 +152,38 @@ export default function ProfileSidebar({ userId, profile, totalVisits, onAvatarU
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </button>
 
-        <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
+        <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors border-b border-gray-100">
           <div className="flex items-center gap-2 text-sm text-red-500">
             <Trash2 className="w-4 h-4" />
             Delete Account
           </div>
           <ChevronRight className="w-4 h-4 text-gray-400" />
         </button>
+
+        {/* Google account link */}
+        {googleLinked ? (
+          <div className="flex items-center gap-2 px-4 py-3 text-sm text-green-600">
+            <GoogleIcon />
+            Google Connected
+          </div>
+        ) : (
+          <button
+            onClick={handleLinkGoogle}
+            disabled={linkingGoogle}
+            className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            <div className="flex items-center gap-2 text-sm text-black">
+              <GoogleIcon />
+              {linkingGoogle ? "Redirecting…" : "Connect Google"}
+            </div>
+            <ChevronRight className="w-4 h-4 text-gray-400" />
+          </button>
+        )}
       </div>
+
+      {googleError && (
+        <p className="text-red-500 text-xs mt-2 px-1">{googleError}</p>
+      )}
     </aside>
   );
 }

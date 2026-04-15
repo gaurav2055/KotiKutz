@@ -5,7 +5,7 @@ import Modal from "@/components/ui/Modal";
 import DarkInput from "@/components/ui/DarkInput";
 import { supabase } from "@/lib/supabase";
 
-export type AuthMode = "login" | "signup";
+export type AuthMode = "login" | "signup" | "forgot";
 
 type Props = {
   onClose:      () => void;
@@ -47,16 +47,29 @@ export default function AuthModal({ onClose, defaultMode = "login" }: Props) {
   const canSubmit =
     !loading &&
     form.email !== "" &&
-    form.password !== "" &&
-    (mode === "login" || (
-      form.name !== "" &&
-      passwordValid &&
-      form.password === form.confirmPassword
+    (mode === "forgot" || (
+      form.password !== "" &&
+      (mode === "login" || (
+        form.name !== "" &&
+        passwordValid &&
+        form.password === form.confirmPassword
+      ))
     ));
 
   async function handleSubmit() {
     setLoading(true);
     setError(null);
+
+    if (mode === "forgot") {
+      const { error } = await supabase.auth.resetPasswordForEmail(form.email, {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      });
+      if (error) { setError(error.message); setLoading(false); return; }
+      setLoading(false);
+      setEmailSent(true);
+      return;
+    }
+
     if (mode === "signup" && form.password !== form.confirmPassword) {
       setError("Passwords do not match.");
       setLoading(false);
@@ -103,8 +116,10 @@ export default function AuthModal({ onClose, defaultMode = "login" }: Props) {
           </div>
           <h2 className="text-xl font-bold text-[#f3f4f6]">Check your email</h2>
           <p className="text-sm text-gray-400 leading-relaxed">
-            We sent a confirmation link to <span className="text-white font-medium">{form.email}</span>.<br />
-            Click the link in that email to activate your account.
+            {mode === "forgot"
+              ? <>We sent a password reset link to <span className="text-white font-medium">{form.email}</span>.<br />Click the link to set a new password.</>
+              : <>We sent a confirmation link to <span className="text-white font-medium">{form.email}</span>.<br />Click the link in that email to activate your account.</>
+            }
           </p>
           <p className="text-xs text-gray-600">Didn&apos;t receive it? Check your spam folder.</p>
           <button
@@ -124,53 +139,64 @@ export default function AuthModal({ onClose, defaultMode = "login" }: Props) {
       {/* Header */}
       <div className="text-center mb-6">
         <h2 className="text-xl font-bold text-[#f3f4f6] mb-1">
-          {mode === "login" ? "Welcome back" : "Create an account"}
+          {mode === "forgot" ? "Reset Password" : mode === "login" ? "Welcome back" : "Create an account"}
         </h2>
         <p className="text-sm text-gray-500">
-          {mode === "login" ? "Log in to your KotiKutz account" : "Join KotiKutz today"}
+          {mode === "forgot" ? "Enter your email and we'll send a reset link" : mode === "login" ? "Log in to your KotiKutz account" : "Join KotiKutz today"}
         </p>
       </div>
 
-      {/* Tab toggle */}
-      <div className="flex bg-[#1c1c1c] rounded-xl p-1 mb-6">
-        {(["login", "signup"] as AuthMode[]).map((m) => (
+      {/* Tab toggle — hidden in forgot mode */}
+      {mode !== "forgot" && (
+        <div className="flex bg-[#1c1c1c] rounded-xl p-1 mb-6">
+          {(["login", "signup"] as AuthMode[]).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMode(m)}
+              className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
+                mode === m
+                  ? "bg-brand-green text-black"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              {m === "login" ? "Log In" : "Sign Up"}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Google OAuth — hidden in forgot mode */}
+      {mode !== "forgot" && (
+        <>
           <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`flex-1 py-2 text-sm font-medium rounded-lg transition-colors ${
-              mode === m
-                ? "bg-brand-green text-black"
-                : "text-gray-400 hover:text-gray-200"
-            }`}
+            onClick={handleGoogle}
+            className="w-full flex items-center justify-center gap-3 h-11 bg-white text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-100 transition-colors mb-4 cursor-pointer"
           >
-            {m === "login" ? "Log In" : "Sign Up"}
+            <GoogleIcon />
+            Continue with Google
           </button>
-        ))}
-      </div>
-
-      {/* Google OAuth */}
-      <button
-        onClick={handleGoogle}
-        className="w-full flex items-center justify-center gap-3 h-11 bg-white text-gray-700 rounded-xl text-sm font-medium hover:bg-gray-100 transition-colors mb-4 cursor-pointer"
-      >
-        <GoogleIcon />
-        Continue with Google
-      </button>
-
-      {/* Divider */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="flex-1 h-px bg-gray-700" />
-        <span className="text-xs text-gray-500">or</span>
-        <div className="flex-1 h-px bg-gray-700" />
-      </div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 h-px bg-gray-700" />
+            <span className="text-xs text-gray-500">or</span>
+            <div className="flex-1 h-px bg-gray-700" />
+          </div>
+        </>
+      )}
 
       {/* Form fields */}
       <div className="space-y-3">
-        {mode === "signup" && (
-          <DarkInput label="Full Name" placeholder="John Doe" value={form.name} onChange={(v) => set("name", v)} name="name" autoComplete="name" />
+        {mode === "forgot" && (
+          <DarkInput label="Email" placeholder="you@example.com" value={form.email} onChange={(v) => set("email", v)} type="email" name="email" autoComplete="email" />
         )}
-        <DarkInput label="Email" placeholder="you@example.com" value={form.email} onChange={(v) => set("email", v)} type="email" name="email" autoComplete="email" />
-        <DarkInput label="Password" placeholder="••••••••" value={form.password} onChange={(v) => set("password", v)} type="password" name="password" autoComplete={mode === "login" ? "current-password" : "new-password"} />
+        {mode !== "forgot" && (
+          <>
+            {mode === "signup" && (
+              <DarkInput label="Full Name" placeholder="John Doe" value={form.name} onChange={(v) => set("name", v)} name="name" autoComplete="name" />
+            )}
+            <DarkInput label="Email" placeholder="you@example.com" value={form.email} onChange={(v) => set("email", v)} type="email" name="email" autoComplete="email" />
+            <DarkInput label="Password" placeholder="••••••••" value={form.password} onChange={(v) => set("password", v)} type="password" name="password" autoComplete={mode === "login" ? "current-password" : "new-password"} />
+          </>
+        )}
         {mode === "signup" && form.password !== "" && (
           <ul className="space-y-1 px-1">
             {passwordRules.map((rule) => (
@@ -197,7 +223,7 @@ export default function AuthModal({ onClose, defaultMode = "login" }: Props) {
       {/* Forgot password */}
       {mode === "login" && (
         <div className="text-right mt-2">
-          <button className="text-xs text-gray-500 hover:text-brand-green transition-colors">
+          <button onClick={() => { setMode("forgot"); setError(null); }} className="text-xs text-gray-500 hover:text-brand-green transition-colors">
             Forgot password?
           </button>
         </div>
@@ -214,18 +240,18 @@ export default function AuthModal({ onClose, defaultMode = "login" }: Props) {
         disabled={!canSubmit}
         className="w-full h-11 bg-brand-green text-black text-sm font-semibold rounded-xl mt-5 hover:opacity-80 transition-opacity disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
       >
-        {loading ? "Please wait…" : mode === "login" ? "Log In" : "Create Account"}
+        {loading ? "Please wait…" : mode === "forgot" ? "Send Reset Link" : mode === "login" ? "Log In" : "Create Account"}
       </button>
 
       {/* Switch mode */}
       <p className="text-center text-xs text-gray-500 mt-4">
-        {mode === "login" ? "Don't have an account? " : "Already have an account? "}
-        <button
-          onClick={() => setMode(mode === "login" ? "signup" : "login")}
-          className="text-brand-green hover:underline"
-        >
-          {mode === "login" ? "Sign Up" : "Log In"}
-        </button>
+        {mode === "forgot" ? (
+          <>Remember it? <button onClick={() => { setMode("login"); setError(null); }} className="text-brand-green hover:underline">Back to Log In</button></>
+        ) : mode === "login" ? (
+          <>Don&apos;t have an account? <button onClick={() => setMode("signup")} className="text-brand-green hover:underline">Sign Up</button></>
+        ) : (
+          <>Already have an account? <button onClick={() => setMode("login")} className="text-brand-green hover:underline">Log In</button></>
+        )}
       </p>
     </Modal>
   );

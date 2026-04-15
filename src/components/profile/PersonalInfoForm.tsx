@@ -168,7 +168,7 @@ export default function PersonalInfoForm({ userId, profile, onSave }: Props) {
               <p className="text-base font-medium text-black">{profile.email ?? "—"}</p>
               <p className="text-xs text-gray-400 mt-0.5">Email cannot be changed here</p>
             </div>
-            <TextInput label="Date of Birth" value={form.dob}    onChange={(v) => set("dob", v)} />
+            <TextInput label="Date of Birth" type="date" value={form.dob} onChange={(v) => set("dob", v)} />
             <div>
               <label className="block text-sm text-gray-600 mb-1">Gender</label>
               <AdminSelect
