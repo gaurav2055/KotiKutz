@@ -19,7 +19,7 @@ No test framework is configured yet.
 
 ### Routing
 
-Uses the Next.js App Router (`src/app/`). `src/middleware.ts` runs on all `/admin/*` routes: redirects unauthenticated users and `customer`-role users to `/`, and injects `x-user-role`, `x-user-id`, and `x-user-location` request headers for use by admin pages.
+Uses the Next.js App Router (`src/app/`). `src/proxy.ts` (Next.js 16 renamed `middleware.ts` → `proxy.ts`) runs on all `/admin/*` routes: redirects unauthenticated users and `customer`-role users to `/`, and injects `x-user-role`, `x-user-id`, and `x-user-location` request headers for use by admin pages.
 
 **Client-facing:**
 - `/` — Home page (hero, offers carousel, locations grid, popular services)
