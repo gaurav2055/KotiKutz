@@ -44,7 +44,7 @@ export default function StaffPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [addMode, setAddMode] = useState<AddMode>("create");
-  const [form, setForm] = useState({ email: "", name: "", role: "employee", locationId: "" });
+  const [form, setForm] = useState({ email: "", firstName: "", lastName: "", role: "employee", locationId: "" });
 
   const fetchStaff = useCallback(async () => {
     setLoading(true);
@@ -62,14 +62,14 @@ export default function StaffPage() {
   function openCreate() {
     setEditTarget(null);
     setAddMode("create");
-    setForm({ email: "", name: "", role: "employee", locationId: locations[0]?.id ?? "" });
+    setForm({ email: "", firstName: "", lastName: "", role: "employee", locationId: locations[0]?.id ?? "" });
     setError("");
     setShowForm(true);
   }
 
   function openEdit(s: StaffMember) {
     setEditTarget(s);
-    setForm({ email: s.email ?? "", name: s.name ?? "", role: s.role, locationId: s.location_id ?? "" });
+    setForm({ email: s.email ?? "", firstName: s.first_name ?? "", lastName: s.last_name ?? "", role: s.role, locationId: s.location_id ?? "" });
     setError("");
     setShowForm(true);
   }
@@ -82,7 +82,7 @@ export default function StaffPage() {
       const res = await fetch("/api/admin/staff", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: editTarget.id, role: form.role, locationId: form.locationId, name: form.name }),
+        body: JSON.stringify({ userId: editTarget.id, role: form.role, locationId: form.locationId, firstName: form.firstName, lastName: form.lastName }),
       });
       if (!res.ok) { const j = await res.json(); setError(j.error); setSaving(false); return; }
     } else {
@@ -91,7 +91,8 @@ export default function StaffPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           email: form.email,
-          name: addMode === "create" ? form.name : undefined,
+          firstName: addMode === "create" ? form.firstName : undefined,
+          lastName: addMode === "create" ? form.lastName : undefined,
           role: form.role,
           locationId: form.locationId,
           mode: addMode,
@@ -217,16 +218,27 @@ export default function StaffPage() {
             />
           </div>
 
-          {/* Name field only for "create" mode or editing */}
+          {/* Name fields only for "create" mode or editing */}
           {(!editTarget && addMode === "create" || editTarget) && (
-            <div>
-              <label className="text-white/60 text-sm block mb-1">Full Name</label>
-              <input
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]"
-                placeholder="John Doe"
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-white/60 text-sm block mb-1">First Name</label>
+                <input
+                  value={form.firstName}
+                  onChange={(e) => setForm({ ...form, firstName: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]"
+                  placeholder="John"
+                />
+              </div>
+              <div>
+                <label className="text-white/60 text-sm block mb-1">Last Name</label>
+                <input
+                  value={form.lastName}
+                  onChange={(e) => setForm({ ...form, lastName: e.target.value })}
+                  className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]"
+                  placeholder="Doe"
+                />
+              </div>
             </div>
           )}
 

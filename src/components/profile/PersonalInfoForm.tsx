@@ -67,7 +67,6 @@ export default function PersonalInfoForm({ userId, profile, onSave }: Props) {
       .update({
         first_name:            form.first_name || null,
         last_name:             form.last_name || null,
-        name:                  `${form.first_name} ${form.last_name}`.trim() || null,
         phone:                 form.phone || null,
         dob:                   form.dob || null,
         gender:                form.gender || null,

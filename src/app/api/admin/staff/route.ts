@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { email, name, role, locationId, mode, redirectTo } = await request.json();
+  const { email, firstName, lastName, role, locationId, mode, redirectTo } = await request.json();
 
   if (!email || !role || !locationId || !mode) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -86,14 +86,20 @@ export async function POST(request: NextRequest) {
   }
 
   // mode === "create": invite new user — creates account AND sends invite email
-  if (!name) return NextResponse.json({ error: "Name is required when creating a new account" }, { status: 400 });
+  if (!firstName) return NextResponse.json({ error: "First name is required when creating a new account" }, { status: 400 });
+
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+  const first = cap(firstName.trim());
+  const last  = lastName?.trim() ? cap(lastName.trim()) : "";
+  const fullName = [first, last].filter(Boolean).join(" ");
 
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
     redirectTo: redirectTo ?? `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/callback`,
     data: {
-      full_name: name,
-      given_name: name.split(" ")[0],
-      family_name: name.split(" ").slice(1).join(" "),
+      full_name:   fullName,
+      given_name:  first,
+      family_name: last,
+      role,
     },
   });
 
@@ -101,12 +107,19 @@ export async function POST(request: NextRequest) {
 
   const userId = authData.user.id;
 
-  await supabaseAdmin.from("profiles").update({
-    role,
-    preferred_location_id: locationId,
-    first_name: name.split(" ")[0],
-    last_name:  name.split(" ").slice(1).join(" ") || null,
-  }).eq("id", userId);
+  // Trigger already created the profile with the role from metadata;
+  // explicitly update as a belt-and-suspenders measure.
+  const { error: profileError } = await supabaseAdmin
+    .from("profiles")
+    .update({
+      role,
+      preferred_location_id: locationId || null,
+      first_name:            first,
+      last_name:             last || null,
+    })
+    .eq("id", userId);
+
+  if (profileError) return NextResponse.json({ error: profileError.message }, { status: 500 });
 
   const { error: staffError } = await supabaseAdmin.from("staff").insert({ id: userId, location_id: locationId });
   if (staffError) return NextResponse.json({ error: staffError.message }, { status: 500 });
@@ -120,12 +133,16 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { userId, role, locationId } = await request.json();
+  const { userId, role, locationId, firstName, lastName } = await request.json();
 
-  // Update profile (role + location)
+  // Update profile (role + location + name)
   const profileUpdates: Record<string, unknown> = {};
   if (role) profileUpdates.role = role;
   if (locationId !== undefined) profileUpdates.preferred_location_id = locationId;
+  if (firstName !== undefined) {
+    profileUpdates.first_name = firstName || null;
+    profileUpdates.last_name  = lastName || null;
+  }
 
   if (Object.keys(profileUpdates).length > 0) {
     const { error } = await supabaseAdmin.from("profiles").update(profileUpdates).eq("id", userId);
