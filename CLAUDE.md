@@ -71,7 +71,7 @@ Routes:
 | `admin/cancellation-requests` | Manage cancellation requests |
 | `admin/change-requests` | Manage reschedule/change requests |
 | `admin/content` | CMS content CRUD |
-| `admin/customers` | Customer list |
+| `admin/customers` | Customer list with gender and preferred_location_id; supports search, gender, location, phone, and joined-date filters on the frontend |
 | `admin/locations` | Location CRUD |
 | `admin/offers` | Offers CRUD |
 | `admin/services` | Service CRUD |
@@ -87,11 +87,11 @@ Routes:
 **Layout (`src/components/`):**
 - `ClientShell.tsx` — Conditionally renders `<Navbar>` and `<Footer>` based on route (hidden on `/admin/*`)
 - `Navbar.tsx` — Main navigation with auth dropdown and mobile menu
-- `Footer.tsx` — Footer with dynamic location links and contact info
+- `Footer.tsx` — Footer with dynamic location links, contact info, and conditional nav (Login when logged out, My Profile when logged in)
 - `SiteHero.tsx` — Reusable hero section with configurable title and buttons
-- `LocationCard.tsx` — Location display card
-- `ServiceCard.tsx` — Service card for carousel/slider layouts
-- `ServiceGridCard.tsx` — Service card for grid layouts
+- `LocationCard.tsx` — Location display card; accepts `image: string | null`, shows dark placeholder when no image
+- `ServiceCard.tsx` — Service card for carousel/slider layouts; null-safe image
+- `ServiceGridCard.tsx` — Service card for grid layouts; null-safe image
 - `ServicesSlider.tsx` — Client-side carousel for services
 
 **UI atoms (`src/components/ui/`):**
@@ -108,10 +108,10 @@ Routes:
 - `Toggle.tsx` — Toggle switch
 
 **Admin shared (`src/components/admin/`):**
-- `AdminSidebar.tsx` — Left nav sidebar for admin layout (role-aware visibility)
-- `AdminTopbar.tsx` — Top bar for admin layout
+- `AdminSidebar.tsx` — Role-aware nav sidebar; static on desktop (`lg+`), slide-in overlay drawer on mobile with backdrop
+- `AdminTopbar.tsx` — Top bar with page title, role badge, and hamburger button (`lg:hidden`) that opens the sidebar
 - `AdminModal.tsx` — Standardized modal wrapper for admin CRUD forms
-- `AdminTable.tsx` — Reusable table with header, rows, action buttons
+- `AdminTable.tsx` — Reusable table with sorting; on mobile renders stacked cards (`mobileView="cards"`, default) or horizontal scroll (`mobileView="scroll"`); `mobileHero` flag on a `ColumnDef` renders that column's content at the top of each card (used for avatars/images)
 - `TableImage.tsx` — Avatar/image cell with fallback initials
 
 **Appointments (`src/components/appointments/`):**
@@ -145,6 +145,13 @@ Routes:
 - `src/lib/supabase-admin.ts` — Server-side Supabase client (service role key, API routes only)
 - `src/lib/admin-auth.ts` — `getAdminCaller()`, `requireRole()` helpers for API route auth
 - `src/contexts/AuthContext.tsx` — App-wide auth state (`user`, `session`, `loading`, `signOut`)
+
+### Database Notes
+
+- `appointments.staff_id` → `staff.id` FK (`appointments_staff_id_fkey`) — required for PostgREST to resolve the `staff(...)` join in appointment queries. Added via migration; without it the query throws "Could not find a relationship between appointments and staff".
+- `staff.id` → `profiles.id` FK (`staff_id_fkey`) — staff records share PK with profiles.
+- `profiles.name` is a **generated column** (`ALWAYS GENERATED` as `TRIM(first_name || ' ' || last_name)`). Never write to it directly — update `first_name`/`last_name` instead.
+- `handle_new_user` trigger fires on `auth.users` INSERT and creates a profile row. It reads `role` from `raw_user_meta_data` so that staff invites get the correct role on creation.
 
 ### Styling
 
