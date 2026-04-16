@@ -7,7 +7,7 @@ import { MapPin } from "lucide-react";
 type LocationCardProps = {
   name: string;
   address: string;
-  image: string;
+  image: string | null;
 };
 
 // `relative` is required — next/image with fill needs a positioned parent,
@@ -22,7 +22,10 @@ export default function LocationCard({ name, address, image }: LocationCardProps
       onClick={() => setShowInfo((s) => !s)}
     >
       {/* Background photo */}
-      <Image src={image} alt={name} fill className="object-cover" />
+      {image
+        ? <Image src={image} alt={name} fill className="object-cover" />
+        : <div className="absolute inset-0 bg-gray-800" />
+      }
 
       {/* ── DEFAULT STATE — dark strip at bottom ── */}
       {/* h-[17%] on mobile, h-[15%] on md+. Fades out on hover (desktop) or tap (touch). */}

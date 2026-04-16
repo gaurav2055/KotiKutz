@@ -15,7 +15,7 @@ type Service = {
   category: string;
   gender: string;
   description: string;
-  image_url: string;
+  image_url: string | null;
 };
 
 export type FiltersState = {

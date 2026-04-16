@@ -50,7 +50,7 @@ export default function TeamSlider() {
           ref={scrollRef}
           className="flex gap-6 md:gap-14 overflow-x-auto snap-x snap-mandatory scroll-smooth px-4 md:px-20 pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {members.map((member) => (
+          {members.filter((m) => m.profiles?.avatar_url).map((member) => (
             <div
               key={member.id}
               data-card
@@ -59,7 +59,7 @@ export default function TeamSlider() {
               <TeamMemberCard
                 name={member.profiles?.first_name ? `${member.profiles.first_name} ${member.profiles.last_name ?? ""}`.trim() : member.profiles?.name ?? ""}
                 specialization={member.specialization ?? ""}
-                image={member.profiles?.avatar_url ?? ""}
+                image={member.profiles!.avatar_url!}
                 location={member.locations?.[0]?.name ?? ""}
               />
             </div>

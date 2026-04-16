@@ -9,7 +9,7 @@ type Location = {
   id: string;
   name: string;
   address: string;
-  image_url: string;
+  image_url: string | null;
 };
 
 type Props = { description?: string | null };

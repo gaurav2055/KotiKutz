@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Phone, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 const LOGO = "/logo.png";
 
@@ -14,6 +15,8 @@ export default function Footer() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [phone,     setPhone]     = useState("+919820571506");
   const [email,     setEmail]     = useState("jaygauravs@gmail.com");
+  const { user, loading } = useAuth();
+  const isLoggedIn = !loading && user !== null;
 
   useEffect(() => {
     supabase.from("locations").select("id, name").order("name").then(({ data }) => {
@@ -76,7 +79,10 @@ export default function Footer() {
           <Link href="/services"     className="hover:text-brand-green transition-colors">Services</Link>
           <Link href="/appointments" className="hover:text-brand-green transition-colors">Book Appointment</Link>
           <Link href="/testimonials" className="hover:text-brand-green transition-colors">Testimonials</Link>
-          <Link href="/login"        className="hover:text-brand-green transition-colors">Login</Link>
+          {isLoggedIn
+            ? <Link href="/profile" className="hover:text-brand-green transition-colors">My Profile</Link>
+            : <Link href="/login"   className="hover:text-brand-green transition-colors">Login</Link>
+          }
         </div>
 
       </div>

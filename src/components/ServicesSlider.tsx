@@ -10,7 +10,7 @@ type Service = {
   name: string;
   price: number;
   description: string;
-  image_url: string;
+  image_url: string | null;
 };
 
 function SliderSkeleton() {

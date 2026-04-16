@@ -5,14 +5,17 @@ type ServiceGridCardProps = {
   name: string;
   price: string;
   description: string;
-  image: string;
+  image: string | null;
   location?: string;
 };
 
 export default function ServiceGridCard({ name, price, description, image, location = "All" }: ServiceGridCardProps) {
   return (
     <div className="relative h-[289px] rounded-[12px] overflow-hidden shadow-md group cursor-pointer">
-      <Image src={image} alt={name} fill className="object-cover" />
+      {image
+        ? <Image src={image} alt={name} fill className="object-cover" />
+        : <div className="absolute inset-0 bg-gray-700" />
+      }
 
       {/* Gradient for text readability — always on mobile/tablet, fades on desktop hover */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/60 to-black/30 transition-opacity duration-300 lg:group-hover:opacity-0" />
