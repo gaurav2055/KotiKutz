@@ -188,6 +188,7 @@ export default function ServicesPage() {
     {
       label: "",
       headerClassName: "w-12",
+      mobileHero: true,
       render: (s) => s.image_url
         ? <TableImage src={s.image_url} alt={s.name} />
         : <div className="w-9 h-9 rounded-md bg-white/5 flex items-center justify-center text-white/20 text-xs">?</div>,

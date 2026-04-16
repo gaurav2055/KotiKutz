@@ -1,9 +1,12 @@
 "use client";
 
+import { Menu } from "lucide-react";
+
 interface AdminTopbarProps {
   title: string;
   role: string;
   userName?: string;
+  onMenuClick?: () => void;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -12,13 +15,22 @@ const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
 };
 
-export default function AdminTopbar({ title, role, userName }: AdminTopbarProps) {
+export default function AdminTopbar({ title, role, userName, onMenuClick }: AdminTopbarProps) {
   return (
-    <header className="h-14 border-b border-white/10 flex items-center justify-between px-6">
-      <h1 className="text-white font-semibold text-base">{title}</h1>
+    <header className="h-14 border-b border-white/10 flex items-center justify-between px-4 lg:px-6">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-1.5 text-white/60 hover:text-white transition-colors"
+          aria-label="Open menu"
+        >
+          <Menu size={20} />
+        </button>
+        <h1 className="text-white font-semibold text-base">{title}</h1>
+      </div>
       <div className="flex items-center gap-3">
         {userName && (
-          <span className="text-white/60 text-sm">{userName}</span>
+          <span className="hidden sm:inline text-white/60 text-sm">{userName}</span>
         )}
         <span className="text-xs px-2 py-0.5 rounded-full bg-white/10 text-white/60 uppercase tracking-wide">
           {ROLE_LABELS[role] ?? role}

@@ -34,6 +34,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const [role, setRole] = useState<AdminRole | null>(null);
   const [userName, setUserName] = useState<string>("");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -63,9 +64,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-[#111] text-white flex">
-      <AdminSidebar role={role} />
+      <AdminSidebar role={role} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
-        <AdminTopbar title={getTitle(pathname)} role={role} userName={userName} />
+        <AdminTopbar title={getTitle(pathname)} role={role} userName={userName} onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 p-6 overflow-auto">
           {children}
         </main>

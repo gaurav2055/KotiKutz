@@ -120,6 +120,7 @@ export default function StaffPage() {
     {
       label: "",
       headerClassName: "w-12",
+      mobileHero: true,
       render: (s) => s.avatar_url
         ? <TableImage src={s.avatar_url} alt={s.name ?? "Staff"} />
         : <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-white/30 text-xs shrink-0">
