@@ -26,10 +26,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ data });
   }
 
-  // Customer list with booking counts
+  // Customer list
   const { data, error } = await supabaseAdmin
     .from("profiles")
-    .select("id, name, first_name, last_name, email, phone, created_at")
+    .select("id, name, first_name, last_name, email, phone, gender, preferred_location_id, created_at")
     .eq("role", "customer")
     .order("created_at", { ascending: false });
 

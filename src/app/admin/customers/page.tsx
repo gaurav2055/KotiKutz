@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from "react";
 import { X } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 import AdminTable, { type ColumnDef } from "@/components/admin/AdminTable";
+import AdminSelect from "@/components/ui/AdminSelect";
+import { supabase } from "@/lib/supabase";
 
 interface Customer {
   id: string;
@@ -12,8 +14,12 @@ interface Customer {
   last_name: string | null;
   email: string | null;
   phone: string | null;
+  gender: string | null;
+  preferred_location_id: string | null;
   created_at: string;
 }
+
+type SortKey = "name" | "joined_asc" | "joined_desc";
 
 interface Booking {
   id: string;
@@ -45,10 +51,20 @@ function formatDate(d: string) {
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [locations, setLocations] = useState<{ label: string; value: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<Customer | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
+
+  // Filters
+  const [search, setSearch] = useState("");
+  const [joinedFrom, setJoinedFrom] = useState("");
+  const [joinedTo, setJoinedTo] = useState("");
+  const [filterGender, setFilterGender] = useState("");
+  const [filterLocation, setFilterLocation] = useState("");
+  const [filterPhone, setFilterPhone] = useState(""); // "yes" | "no" | ""
+  const [sortBy, setSortBy] = useState<SortKey>("joined_desc");
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -59,6 +75,12 @@ export default function CustomersPage() {
   }, []);
 
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
+
+  useEffect(() => {
+    supabase.from("locations").select("id, name").order("name").then(({ data }) => {
+      if (data) setLocations(data.map((l) => ({ label: l.name, value: l.id })));
+    });
+  }, []);
 
   async function openCustomer(c: Customer) {
     setSelected(c);
@@ -74,6 +96,15 @@ export default function CustomersPage() {
     { label: "Name",   render: (c) => customerName(c) },
     { label: "Email",  render: (c) => <span className="text-white/60">{c.email ?? "—"}</span> },
     { label: "Phone",  render: (c) => <span className="text-white/60">{c.phone ?? "—"}</span> },
+    { label: "Gender", render: (c) => <span className="text-white/60">{c.gender ?? "—"}</span> },
+    {
+      label: "Location",
+      render: (c) => (
+        <span className="text-white/60">
+          {locations.find((l) => l.value === c.preferred_location_id)?.label ?? "—"}
+        </span>
+      ),
+    },
     {
       label: "Joined",
       render: (c) => (
@@ -84,16 +115,133 @@ export default function CustomersPage() {
     },
   ];
 
+  const displayed = customers
+    .filter((c) => {
+      if (search) {
+        const q = search.toLowerCase();
+        const match =
+          customerName(c).toLowerCase().includes(q) ||
+          (c.email ?? "").toLowerCase().includes(q) ||
+          (c.phone ?? "").toLowerCase().includes(q);
+        if (!match) return false;
+      }
+      const joined = c.created_at.slice(0, 10);
+      if (joinedFrom && joined < joinedFrom) return false;
+      if (joinedTo   && joined > joinedTo)   return false;
+      if (filterGender   && c.gender !== filterGender)                 return false;
+      if (filterLocation && c.preferred_location_id !== filterLocation) return false;
+      if (filterPhone === "yes" && !c.phone) return false;
+      if (filterPhone === "no"  && !!c.phone) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "name")        return customerName(a).localeCompare(customerName(b));
+      if (sortBy === "joined_asc")  return a.created_at.localeCompare(b.created_at);
+      return b.created_at.localeCompare(a.created_at); // joined_desc (default)
+    });
+
+  const hasFilters = search || joinedFrom || joinedTo || filterGender || filterLocation || filterPhone || sortBy !== "joined_desc";
+  function clearFilters() {
+    setSearch(""); setJoinedFrom(""); setJoinedTo("");
+    setFilterGender(""); setFilterLocation(""); setFilterPhone("");
+    setSortBy("joined_desc");
+  }
+
   if (loading) return <div className="flex justify-center pt-20"><Spinner size="lg" /></div>;
 
   return (
     <div>
+      <div className="flex flex-wrap gap-3 mb-4 items-center">
+        {/* Search */}
+        <input
+          placeholder="Search name, email or phone…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 min-w-[180px] bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none placeholder:text-white/30"
+        />
+
+        {/* Gender */}
+        <AdminSelect
+          value={filterGender}
+          onChange={setFilterGender}
+          options={[
+            { label: "Male",   value: "Male" },
+            { label: "Female", value: "Female" },
+            { label: "Other",  value: "Other" },
+          ]}
+          placeholder="All Genders"
+        />
+
+        {/* Preferred location */}
+        <AdminSelect
+          value={filterLocation}
+          onChange={setFilterLocation}
+          options={locations}
+          placeholder="All Locations"
+        />
+
+        {/* Has phone */}
+        <AdminSelect
+          value={filterPhone}
+          onChange={setFilterPhone}
+          options={[
+            { label: "Has phone",    value: "yes" },
+            { label: "No phone",     value: "no" },
+          ]}
+          placeholder="Any contact"
+        />
+
+        {/* Joined date range */}
+        <div className="flex items-center gap-2">
+          <span className="text-white/40 text-xs shrink-0">Joined</span>
+          <input
+            type="date"
+            value={joinedFrom}
+            onChange={(e) => setJoinedFrom(e.target.value)}
+            className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]"
+          />
+          <span className="text-white/40 text-xs">–</span>
+          <input
+            type="date"
+            value={joinedTo}
+            onChange={(e) => setJoinedTo(e.target.value)}
+            className="bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]"
+          />
+        </div>
+
+        {/* Sort */}
+        <AdminSelect
+          value={sortBy}
+          onChange={(v) => setSortBy((v || "joined_desc") as SortKey)}
+          options={[
+            { label: "Newest first",  value: "joined_desc" },
+            { label: "Oldest first",  value: "joined_asc" },
+            { label: "Name A → Z",    value: "name" },
+          ]}
+          placeholder="Sort by"
+        />
+
+        {hasFilters && (
+          <button
+            onClick={clearFilters}
+            className="text-white/40 hover:text-white text-sm transition-colors shrink-0"
+          >
+            Clear all
+          </button>
+        )}
+      </div>
+      {hasFilters && (
+        <p className="text-white/30 text-xs mb-3">
+          {displayed.length} of {customers.length} customers
+        </p>
+      )}
       <AdminTable
         columns={columns}
-        rows={customers}
+        rows={displayed}
         keyExtractor={(c) => c.id}
-        emptyMessage="No customers found."
+        emptyMessage="No customers match your filters."
         onRowClick={openCustomer}
+        mobileView="scroll"
       />
 
       {/* Slide-over panel */}
