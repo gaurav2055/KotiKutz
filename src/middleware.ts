@@ -36,6 +36,12 @@ export async function middleware(request: NextRequest) {
 
   const role = profile?.role ?? "customer";
 
+  // Invited staff must reach this page to set their password before their
+  // role is fully confirmed in the profile — allow any authenticated user through.
+  if (request.nextUrl.pathname === "/admin/set-password") {
+    return response;
+  }
+
   if (role === "customer") {
     return NextResponse.redirect(new URL("/", request.url));
   }

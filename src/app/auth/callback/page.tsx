@@ -1,33 +1,63 @@
 "use client";
 
 import { useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import Spinner from "@/components/ui/Spinner";
 
+function redirectByType(type: string | null, router: ReturnType<typeof useRouter>) {
+  if (type === "invite") {
+    router.replace("/admin/set-password");
+  } else if (type === "recovery") {
+    router.replace("/auth/set-password");
+  } else {
+    router.replace("/");
+  }
+}
+
 function CallbackHandler() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
-    const type = searchParams.get("type"); // "invite" | "recovery" | null
+    // All hash/window access is inside useEffect — client-only, never SSR.
+    const hashParams  = new URLSearchParams(window.location.hash.substring(1));
+    const queryParams = new URLSearchParams(window.location.search);
 
+    const type          = hashParams.get("type") ?? queryParams.get("type");
+    const access_token  = hashParams.get("access_token");
+    const refresh_token = hashParams.get("refresh_token");
+    const code          = queryParams.get("code"); // PKCE flow
+
+    async function run() {
+      // Implicit flow: tokens in hash — set session directly.
+      if (access_token && refresh_token) {
+        const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+        if (!error) { redirectByType(type, router); return; }
+      }
+
+      // PKCE flow: exchange code for session.
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (!error) { redirectByType(type, router); return; }
+      }
+
+      // Fallback: session already set by createBrowserClient auto-detection.
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) { redirectByType(type, router); }
+    }
+
+    run();
+
+    // Belt-and-suspenders: catch SIGNED_IN if it fires after run() already checked.
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!session) return;
-
-      if (event === "SIGNED_IN" && type === "invite") {
-        // New staff invite — redirect to set password
-        router.replace("/admin/set-password");
-      } else if (event === "PASSWORD_RECOVERY") {
-        // Customer forgot-password flow
-        router.replace("/auth/set-password");
-      } else if (event === "SIGNED_IN") {
-        router.replace("/");
+      if (session && (event === "SIGNED_IN" || event === "PASSWORD_RECOVERY")) {
+        const liveType = new URLSearchParams(window.location.hash.substring(1)).get("type") ?? type;
+        redirectByType(liveType, router);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [router, searchParams]);
+  }, [router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#111]">
@@ -36,7 +66,6 @@ function CallbackHandler() {
   );
 }
 
-// Suspense wrapper required because useSearchParams() needs it in Next.js App Router
 export default function AuthCallbackPage() {
   return (
     <Suspense fallback={
