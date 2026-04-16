@@ -15,6 +15,7 @@ import {
   UserCircle,
   MessageSquare,
   LogOut,
+  Globe,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -76,8 +77,15 @@ export default function AdminSidebar({ role }: { role: AdminRole }) {
         })}
       </nav>
 
-      {/* My Profile + Logout */}
+      {/* Client view + My Profile + Logout */}
       <div className="px-3 py-4 border-t border-white/10 space-y-0.5">
+        <Link
+          href="/"
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-white/50 hover:text-white hover:bg-white/5 transition-colors"
+        >
+          <Globe size={18} />
+          Client View
+        </Link>
         <Link
           href="/admin/profile"
           className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${

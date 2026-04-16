@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import Button from "@/components/ui/Button";
 import Image from "next/image";
 import Link from "next/link";
-import { UserCircle2, User, LogOut, Menu, X } from "lucide-react";
+import { UserCircle2, User, LogOut, Menu, X, LayoutDashboard } from "lucide-react";
 import AuthModal from "@/components/auth/AuthModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 const LOGO = "/logo.png";
 
@@ -14,11 +15,24 @@ export default function Navbar() {
   const [authOpen, setAuthOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { user, loading, signOut } = useAuth();
 
   const isLoggedIn = !loading && user !== null;
   const userAvatar = user?.user_metadata?.avatar_url ?? null;
+
+  useEffect(() => {
+    if (!user) { setIsAdmin(false); return; }
+    supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        setIsAdmin(["employee", "manager", "super_admin"].includes(data?.role ?? ""));
+      });
+  }, [user]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -70,7 +84,7 @@ export default function Navbar() {
                   </div>
                 </button>
                 {dropdownOpen && (
-                  <div className="absolute right-0 top-14 w-44 bg-[#1a1a1a] border border-[#333] rounded-xl shadow-xl overflow-hidden z-50">
+                  <div className="absolute right-0 top-14 w-48 bg-[#1a1a1a] border border-[#333] rounded-xl shadow-xl overflow-hidden z-50">
                     <Link
                       href="/profile"
                       onClick={() => setDropdownOpen(false)}
@@ -79,6 +93,16 @@ export default function Navbar() {
                       <User className="w-4 h-4 text-gray-400" />
                       My Profile
                     </Link>
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-3 text-sm text-brand-green hover:bg-[#252525] transition-colors"
+                      >
+                        <LayoutDashboard className="w-4 h-4" />
+                        Admin Panel
+                      </Link>
+                    )}
                     <button
                       onClick={() => { signOut(); setDropdownOpen(false); }}
                       className="w-full flex items-center gap-3 px-4 py-3 text-sm text-red-400 hover:bg-[#252525] transition-colors cursor-pointer"
@@ -127,12 +151,23 @@ export default function Navbar() {
             <Link href="/testimonials" onClick={closeMenu} className="text-white text-lg hover:text-brand-green transition-colors">Testimonials</Link>
 
             {isLoggedIn ? (
-              <button
-                onClick={() => { signOut(); closeMenu(); }}
-                className="flex items-center gap-2 text-red-400 text-lg hover:text-red-300 transition-colors"
-              >
-                <LogOut className="w-5 h-5" /> Log Out
-              </button>
+              <>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={closeMenu}
+                    className="flex items-center gap-2 text-brand-green text-lg hover:opacity-80 transition-colors"
+                  >
+                    <LayoutDashboard className="w-5 h-5" /> Admin Panel
+                  </Link>
+                )}
+                <button
+                  onClick={() => { signOut(); closeMenu(); }}
+                  className="flex items-center gap-2 text-red-400 text-lg hover:text-red-300 transition-colors"
+                >
+                  <LogOut className="w-5 h-5" /> Log Out
+                </button>
+              </>
             ) : (
               <button
                 onClick={() => { setAuthOpen(true); closeMenu(); }}
