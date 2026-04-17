@@ -31,7 +31,7 @@
 ───────────────────────────────────────────── */
 @font-face {
   font-family: 'Algerian';
-  src: local('Algerian');
+  src: url('/fonts/ALGER.TTF') format('truetype'), local('Algerian');
   font-display: swap;
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
 import { supabase } from "@/lib/supabase";
 import { Plus, Pencil, Trash2, X, Upload } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
@@ -23,10 +23,9 @@ interface Offer {
 }
 
 export default function OffersPage() {
-	const { user } = useAuth();
+	const { role } = useAdmin();
 	const [offers, setOffers] = useState<Offer[]>([]);
 	const [locations, setLocations] = useState<{ label: string; value: string }[]>([]);
-	const [role, setRole] = useState("");
 	const [loading, setLoading] = useState(true);
 	const [showForm, setShowForm] = useState(false);
 	const [editTarget, setEditTarget] = useState<Offer | null>(null);
@@ -53,13 +52,6 @@ export default function OffersPage() {
 	}, []);
 
 	useEffect(() => {
-		if (!user) return;
-		supabase
-			.from("profiles")
-			.select("role")
-			.eq("id", user.id)
-			.single()
-			.then(({ data }) => setRole(data?.role ?? ""));
 		fetchOffers();
 		supabase
 			.from("locations")
@@ -67,7 +59,7 @@ export default function OffersPage() {
 			.then(({ data }) => {
 				if (data) setLocations(data.map((l) => ({ label: l.name, value: l.id })));
 			});
-	}, [user, fetchOffers]);
+	}, [fetchOffers]);
 
 	function openCreate() {
 		setEditTarget(null);

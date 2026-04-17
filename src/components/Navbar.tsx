@@ -5,19 +5,19 @@ import Button from "@/components/ui/Button";
 import Image from "next/image";
 import Link from "next/link";
 import { UserCircle2, User, LogOut, Menu, X, LayoutDashboard } from "lucide-react";
-import AuthModal from "@/components/auth/AuthModal";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthModal } from "@/contexts/AuthModalContext";
 import { supabase } from "@/lib/supabase";
 
 const LOGO = "/logo.png";
 
 export default function Navbar() {
-  const [authOpen, setAuthOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { user, loading, signOut } = useAuth();
+  const { openAuthModal } = useAuthModal();
 
   const isLoggedIn = !loading && user !== null;
   const userAvatar = user?.user_metadata?.avatar_url ?? null;
@@ -114,7 +114,7 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
-              <Button className="ml-4" onClick={() => setAuthOpen(true)}>Login</Button>
+              <Button className="ml-4" onClick={openAuthModal}>Login</Button>
             )}
           </div>
 
@@ -170,7 +170,7 @@ export default function Navbar() {
               </>
             ) : (
               <button
-                onClick={() => { setAuthOpen(true); closeMenu(); }}
+                onClick={() => { openAuthModal(); closeMenu(); }}
                 className="text-left text-brand-green text-lg font-medium"
               >
                 Login
@@ -180,7 +180,6 @@ export default function Navbar() {
         )}
       </nav>
 
-      {authOpen && <AuthModal onClose={() => setAuthOpen(false)} />}
     </>
   );
 }

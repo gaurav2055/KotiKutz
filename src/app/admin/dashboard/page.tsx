@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
 import { supabase } from "@/lib/supabase";
 import { CalendarDays, IndianRupee, TrendingDown, Users, BarChart2, Receipt } from "lucide-react";
 import Skeleton from "@/components/ui/Skeleton";
@@ -55,28 +55,24 @@ function DashboardSkeleton() {
 }
 
 export default function DashboardPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { role } = useAdmin();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
   const [filterLocation, setFilterLocation] = useState("");
-  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (authLoading || !user) return;
-    supabase.from("profiles").select("role").eq("id", user.id).single().then(({ data }) => setRole(data?.role ?? ""));
     supabase.from("locations").select("id, name").order("name").then(({ data }) => setLocations(data ?? []));
-  }, [user, authLoading]);
+  }, []);
 
   useEffect(() => {
-    if (!user) return;
     setLoading(true);
     const params = new URLSearchParams();
     if (filterLocation) params.set("locationId", filterLocation);
     fetch(`/api/admin/analytics?${params}`)
       .then((r) => r.json())
       .then((d) => { setAnalytics(d); setLoading(false); });
-  }, [user, filterLocation]);
+  }, [filterLocation]);
 
   const last30Days = Object.entries(analytics?.dailyCounts ?? {})
     .sort(([a], [b]) => a.localeCompare(b));

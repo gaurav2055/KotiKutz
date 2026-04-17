@@ -20,7 +20,7 @@ export default function TeamSlider() {
     supabase
       .from("staff")
       .select("id, specialization, profiles!staff_id_fkey(name, first_name, last_name, avatar_url), locations(name)")
-      .then(({ data }) => { if (data) setMembers(data as StaffMember[]); });
+      .then(({ data }) => { if (data) setMembers(data as unknown as StaffMember[]); });
   }, []);
 
   function scrollBy(dir: 1 | -1) {

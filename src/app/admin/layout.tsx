@@ -7,8 +7,7 @@ import { supabase } from "@/lib/supabase";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 import AdminTopbar from "@/components/admin/AdminTopbar";
 import Spinner from "@/components/ui/Spinner";
-
-type AdminRole = "employee" | "manager" | "super_admin";
+import { AdminProvider, type AdminRole } from "@/contexts/AdminContext";
 
 // Page titles derived from pathname
 function getTitle(pathname: string): string {
@@ -63,14 +62,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="min-h-screen bg-[#111] text-white flex">
-      <AdminSidebar role={role} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col min-w-0">
-        <AdminTopbar title={getTitle(pathname)} role={role} userName={userName} onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 p-6 overflow-auto">
-          {children}
-        </main>
+    <AdminProvider role={role} userName={userName}>
+      <div className="min-h-screen bg-[#111] text-white flex">
+        <AdminSidebar role={role} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <div className="flex-1 flex flex-col min-w-0">
+          <AdminTopbar title={getTitle(pathname)} role={role} userName={userName} onMenuClick={() => setSidebarOpen(true)} />
+          <main className="flex-1 p-6 overflow-auto">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </AdminProvider>
   );
 }

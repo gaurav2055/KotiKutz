@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
 import { supabase } from "@/lib/supabase";
 import { CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 import AdminSelect from "@/components/ui/AdminSelect";
 import AdminTable, { type ColumnDef } from "@/components/admin/AdminTable";
 import AdminModal from "@/components/admin/AdminModal";
-
-type AdminRole = "employee" | "manager" | "super_admin";
 
 interface Appointment {
   id: string;
@@ -56,8 +54,7 @@ function customerName(a: Appointment) {
 }
 
 export default function AdminAppointmentsPage() {
-  const { user, loading: authLoading } = useAuth();
-  const [role, setRole] = useState<AdminRole | null>(null);
+  const { role } = useAdmin();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,18 +80,11 @@ export default function AdminAppointmentsPage() {
   }, [filterLocation, filterDate, filterStatus]);
 
   useEffect(() => {
-    if (authLoading || !user) return;
-    supabase.from("profiles").select("role").eq("id", user.id).single().then(({ data }) => {
-      setRole(data?.role as AdminRole);
-    });
     supabase.from("locations").select("id, name").order("name").then(({ data }) => {
       setLocations(data ?? []);
     });
-  }, [user, authLoading]);
-
-  useEffect(() => {
-    if (role) fetchAppointments();
-  }, [role, fetchAppointments]);
+    fetchAppointments();
+  }, [fetchAppointments]);
 
   async function doAction(id: string, action: string, reason?: string) {
     setActionLoading(id + action);
@@ -203,7 +193,6 @@ export default function AdminAppointmentsPage() {
     },
   ];
 
-  if (authLoading || !role) return <div className="flex justify-center pt-20"><Spinner size="lg" /></div>;
 
   return (
     <div>

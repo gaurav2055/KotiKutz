@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import Image from "next/image";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin } from "@/contexts/AdminContext";
 import { supabase } from "@/lib/supabase";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
@@ -27,10 +27,9 @@ type SortKey = "name" | "category" | "gender" | "price";
 const GENDERS = ["Male", "Female", "Unisex"];
 
 export default function ServicesPage() {
-  const { user } = useAuth();
+  const { role } = useAdmin();
   const [services, setServices] = useState<Service[]>([]);
   const [locations, setLocations] = useState<{ label: string; value: string }[]>([]);
-  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editTarget, setEditTarget] = useState<Service | null>(null);
@@ -59,13 +58,11 @@ export default function ServicesPage() {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
-    supabase.from("profiles").select("role").eq("id", user.id).single().then(({ data }) => setRole(data?.role ?? ""));
     fetchServices();
     supabase.from("locations").select("id, name").then(({ data }) => {
       if (data) setLocations(data.map((l) => ({ label: l.name, value: l.id })));
     });
-  }, [user, fetchServices]);
+  }, [fetchServices]);
 
   function toggleSort(key: string) {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));

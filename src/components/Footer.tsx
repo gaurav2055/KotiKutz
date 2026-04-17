@@ -6,6 +6,7 @@ import { Phone, Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthModal } from "@/contexts/AuthModalContext";
 
 const LOGO = "/logo.png";
 
@@ -16,6 +17,7 @@ export default function Footer() {
   const [phone,     setPhone]     = useState("+919820571506");
   const [email,     setEmail]     = useState("jaygauravs@gmail.com");
   const { user, loading } = useAuth();
+  const { openAuthModal } = useAuthModal();
   const isLoggedIn = !loading && user !== null;
 
   useEffect(() => {
@@ -81,7 +83,7 @@ export default function Footer() {
           <Link href="/testimonials" className="hover:text-brand-green transition-colors">Testimonials</Link>
           {isLoggedIn
             ? <Link href="/profile" className="hover:text-brand-green transition-colors">My Profile</Link>
-            : <Link href="/login"   className="hover:text-brand-green transition-colors">Login</Link>
+            : <button onClick={openAuthModal} className="hover:text-brand-green transition-colors">Login</button>
           }
         </div>
 
