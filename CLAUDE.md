@@ -35,7 +35,7 @@ Uses the Next.js App Router (`src/app/`). `src/proxy.ts` (Next.js 16 renamed `mi
 
 Three-tier role hierarchy:
 - `employee` — limited access; redirected to `/admin/appointments` on login
-- `manager` — intermediate access (dashboard, services, offers, cancellation/change requests)
+- `manager` — intermediate access (dashboard, services, offers, cancellation/change requests, location settings)
 - `super_admin` — full access including staff, locations, content, customers, testimonials
 
 Routes:
@@ -47,8 +47,9 @@ Routes:
 - `/admin/customers` — Customer list (`super_admin` only)
 - `/admin/staff` — Staff management (`super_admin` only; invite via email)
 - `/admin/services` — Service CRUD
-- `/admin/locations` — Location CRUD (`super_admin` only)
-- `/admin/offers` — Offers/promotions CRUD
+- `/admin/locations` — Location CRUD (`super_admin` only; includes auto-confirm toggle)
+- `/admin/location-settings` — Operational settings for manager's assigned location (`manager` only)
+- `/admin/offers` — Offers/promotions CRUD; super_admin can send email blast to opted-in customers
 - `/admin/testimonials` — Testimonial moderation (`super_admin` only)
 - `/admin/content` — CMS content management (`super_admin` only)
 - `/admin/profile` — Admin profile page
@@ -72,14 +73,16 @@ Routes:
 | `admin/change-requests` | Manage reschedule/change requests |
 | `admin/content` | CMS content CRUD |
 | `admin/customers` | Customer list with gender and preferred_location_id; supports search, gender, location, phone, and joined-date filters on the frontend |
-| `admin/locations` | Location CRUD |
-| `admin/offers` | Offers CRUD |
+| `admin/location-settings` | Operational settings for manager's assigned location (open/close time, slot duration, max concurrent bookings, auto-confirm) |
+| `admin/locations` | Location CRUD (super_admin) |
+| `admin/offers` | Offers CRUD + email blast to opted-in customers |
 | `admin/services` | Service CRUD |
 | `admin/staff` | Staff CRUD + invite via `inviteUserByEmail` |
 | `admin/testimonials` | Testimonial moderation |
 | `admin/upload` | Image upload handler |
-| `appointments` | Client-side appointment booking |
-| `appointments/[id]` | Single appointment operations |
+| `appointments` | Client-side appointment booking; respects location `auto_confirm` flag |
+| `appointments/[id]` | Single appointment operations (cancel, reschedule) |
+| `cron/reminders` | Vercel cron job — sends 24h reminder emails (runs daily at 08:00 IST, protected by `CRON_SECRET`) |
 | `testimonials` | Public testimonials fetch |
 
 ### Key Components
@@ -144,13 +147,17 @@ Routes:
 - `src/lib/supabase.ts` — Client-side Supabase client (anon key)
 - `src/lib/supabase-admin.ts` — Server-side Supabase client (service role key, API routes only)
 - `src/lib/admin-auth.ts` — `getAdminCaller()`, `requireRole()` helpers for API route auth
+- `src/lib/email.ts` — nodemailer transporter (Gmail SMTP) + email templates: `bookingConfirmationEmail`, `cancellationEmail`, `reminderEmail`, `offerEmail`; `getUserEmailAndPrefs(userId)` fetches recipient data; all sends are fire-and-forget so failures never block API responses
 - `src/contexts/AuthContext.tsx` — App-wide auth state (`user`, `session`, `loading`, `signOut`)
+- `src/contexts/AdminContext.tsx` — Admin-wide `role` and `userName`; consumed by `AdminSidebar` and `AdminTopbar` (no prop drilling)
 
 ### Database Notes
 
 - `appointments.staff_id` → `staff.id` FK (`appointments_staff_id_fkey`) — required for PostgREST to resolve the `staff(...)` join in appointment queries. Added via migration; without it the query throws "Could not find a relationship between appointments and staff".
 - `staff.id` → `profiles.id` FK (`staff_id_fkey`) — staff records share PK with profiles.
 - `profiles.name` is a **generated column** (`ALWAYS GENERATED` as `TRIM(first_name || ' ' || last_name)`). Never write to it directly — update `first_name`/`last_name` instead.
+- `profiles.notification_preferences` — JSONB column with 4 boolean keys: `booking`, `reminder`, `cancellation`, `offers`. Controls which transactional emails a user receives.
+- `locations.auto_confirm` — boolean (`DEFAULT false`). When true, new bookings at that location are inserted with `status: "confirmed"` instead of `"pending"`.
 - `handle_new_user` trigger fires on `auth.users` INSERT and creates a profile row. It reads `role` from `raw_user_meta_data` so that staff invites get the correct role on creation.
 
 ### Styling
