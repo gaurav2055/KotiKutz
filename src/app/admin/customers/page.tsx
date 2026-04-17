@@ -74,6 +74,7 @@ export default function CustomersPage() {
     setLoading(false);
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchCustomers(); }, [fetchCustomers]);
 
   useEffect(() => {

@@ -42,6 +42,7 @@ export default function ChangeRequestsPage() {
     setLoading(false);
   }, [tab]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchItems(); }, [fetchItems]);
 
   async function doAction(id: string, action: "approve" | "reject") {

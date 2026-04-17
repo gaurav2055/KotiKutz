@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getAdminCaller, requireRole } from "@/lib/admin-auth";
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   const caller = await getAdminCaller();
   if (!requireRole(caller, "manager")) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

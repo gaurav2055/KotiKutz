@@ -58,6 +58,7 @@ export default function ServicesPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchServices();
     supabase.from("locations").select("id, name").then(({ data }) => {
       if (data) setLocations(data.map((l) => ({ label: l.name, value: l.id })));

@@ -1,13 +1,7 @@
 "use client";
 
 import { Menu } from "lucide-react";
-
-interface AdminTopbarProps {
-  title: string;
-  role: string;
-  userName?: string;
-  onMenuClick?: () => void;
-}
+import { useAdmin } from "@/contexts/AdminContext";
 
 const ROLE_LABELS: Record<string, string> = {
   employee: "Employee",
@@ -15,7 +9,13 @@ const ROLE_LABELS: Record<string, string> = {
   super_admin: "Super Admin",
 };
 
-export default function AdminTopbar({ title, role, userName, onMenuClick }: AdminTopbarProps) {
+interface AdminTopbarProps {
+  title: string;
+  onMenuClick?: () => void;
+}
+
+export default function AdminTopbar({ title, onMenuClick }: AdminTopbarProps) {
+  const { role, userName } = useAdmin();
   return (
     <header className="h-14 border-b border-white/10 flex items-center justify-between px-4 lg:px-6">
       <div className="flex items-center gap-2">

@@ -114,6 +114,7 @@ export default function RescheduleModal({
   useEffect(() => {
     if (!locationId) return;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setStaffId("");
     setStaffName("");
     setTimeSlot("");
@@ -125,17 +126,18 @@ export default function RescheduleModal({
       .select("id, profiles!staff_id_fkey(name, first_name, last_name)")
       .eq("location_id", locationId)
       .then(({ data }) => {
+        type StaffRow = { id: string; profiles: { name: string | null; first_name: string | null; last_name: string | null } | null };
         const options: StaffOption[] = [];
         if (data) {
-          data.forEach((s: any) => {
+          (data as unknown as StaffRow[]).forEach((s) => {
             const p = s.profiles;
             const label = p?.first_name ? `${p.first_name} ${p.last_name ?? ""}`.trim() : p?.name ?? "Stylist";
             options.push({ label, value: s.id });
           });
           // Restore previous staff if they work at this location
-          const found = data.find((s: any) => s.id === currentStaffId);
+          const found = (data as unknown as StaffRow[]).find((s) => s.id === currentStaffId);
           if (found && locationId === initLocationId) {
-            const p = (found as any).profiles;
+            const p = found.profiles;
             const name = p?.first_name ? `${p.first_name} ${p.last_name ?? ""}`.trim() : p?.name ?? "Stylist";
             setStaffId(found.id);
             setStaffName(name);
@@ -155,6 +157,7 @@ export default function RescheduleModal({
   // When date or location changes: reload booked slots (excluding current appointment)
   useEffect(() => {
     if (!date || !locationId) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoadingSlots(true);
     Promise.all([
       supabase

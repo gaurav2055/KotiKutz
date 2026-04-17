@@ -16,11 +16,11 @@ import {
   MessageSquare,
   LogOut,
   Globe,
+  Settings,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAdmin, type AdminRole } from "@/contexts/AdminContext";
 import { useEffect } from "react";
-
-type AdminRole = "employee" | "manager" | "super_admin";
 
 interface NavItem {
   label: string;
@@ -30,26 +30,27 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard",            href: "/admin/dashboard",             icon: <LayoutDashboard size={18} />, roles: ["manager", "super_admin"] },
-  { label: "Appointments",         href: "/admin/appointments",          icon: <CalendarDays size={18} />,    roles: ["employee", "manager", "super_admin"] },
-  { label: "Cancellation Requests",href: "/admin/cancellation-requests", icon: <XCircle size={18} />,         roles: ["manager", "super_admin"] },
-  { label: "Services",             href: "/admin/services",              icon: <Scissors size={18} />,        roles: ["manager", "super_admin"] },
-  { label: "Offers",               href: "/admin/offers",                icon: <Tag size={18} />,             roles: ["manager", "super_admin"] },
-  { label: "Change Requests",      href: "/admin/change-requests",       icon: <GitPullRequest size={18} />,  roles: ["super_admin"] },
-  { label: "Staff",                href: "/admin/staff",                 icon: <Users size={18} />,           roles: ["super_admin"] },
-  { label: "Locations",            href: "/admin/locations",             icon: <MapPin size={18} />,          roles: ["super_admin"] },
-  { label: "Site Content",         href: "/admin/content",               icon: <FileText size={18} />,        roles: ["super_admin"] },
-  { label: "Customers",            href: "/admin/customers",             icon: <UserCircle size={18} />,      roles: ["super_admin"] },
-  { label: "Testimonials",         href: "/admin/testimonials",          icon: <MessageSquare size={18} />,   roles: ["super_admin"] },
+  { label: "Dashboard",             href: "/admin/dashboard",             icon: <LayoutDashboard size={18} />, roles: ["manager", "super_admin"] },
+  { label: "Location Settings",     href: "/admin/location-settings",     icon: <Settings size={18} />,        roles: ["manager"] },
+  { label: "Appointments",          href: "/admin/appointments",          icon: <CalendarDays size={18} />,    roles: ["employee", "manager", "super_admin"] },
+  { label: "Cancellation Requests", href: "/admin/cancellation-requests", icon: <XCircle size={18} />,         roles: ["manager", "super_admin"] },
+  { label: "Services",              href: "/admin/services",              icon: <Scissors size={18} />,        roles: ["manager", "super_admin"] },
+  { label: "Offers",                href: "/admin/offers",                icon: <Tag size={18} />,             roles: ["manager", "super_admin"] },
+  { label: "Change Requests",       href: "/admin/change-requests",       icon: <GitPullRequest size={18} />,  roles: ["super_admin"] },
+  { label: "Staff",                 href: "/admin/staff",                 icon: <Users size={18} />,           roles: ["super_admin"] },
+  { label: "Locations",             href: "/admin/locations",             icon: <MapPin size={18} />,          roles: ["super_admin"] },
+  { label: "Site Content",          href: "/admin/content",               icon: <FileText size={18} />,        roles: ["super_admin"] },
+  { label: "Customers",             href: "/admin/customers",             icon: <UserCircle size={18} />,      roles: ["super_admin"] },
+  { label: "Testimonials",          href: "/admin/testimonials",          icon: <MessageSquare size={18} />,   roles: ["super_admin"] },
 ];
 
 interface AdminSidebarProps {
-  role: AdminRole;
   open: boolean;
   onClose: () => void;
 }
 
-function SidebarContent({ role, pathname, onClose, signOut }: { role: AdminRole; pathname: string; onClose: () => void; signOut: () => void }) {
+function SidebarContent({ pathname, onClose, signOut }: { pathname: string; onClose: () => void; signOut: () => void }) {
+  const { role } = useAdmin();
   const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(role));
   return (
     <>
@@ -115,7 +116,7 @@ function SidebarContent({ role, pathname, onClose, signOut }: { role: AdminRole;
   );
 }
 
-export default function AdminSidebar({ role, open, onClose }: AdminSidebarProps) {
+export default function AdminSidebar({ open, onClose }: AdminSidebarProps) {
   const pathname = usePathname();
   const { signOut } = useAuth();
 
@@ -141,7 +142,7 @@ export default function AdminSidebar({ role, open, onClose }: AdminSidebarProps)
           lg:translate-x-0 lg:static lg:z-auto lg:min-h-screen
         `}
       >
-        <SidebarContent role={role} pathname={pathname} onClose={onClose} signOut={signOut} />
+        <SidebarContent pathname={pathname} onClose={onClose} signOut={signOut} />
       </aside>
     </>
   );

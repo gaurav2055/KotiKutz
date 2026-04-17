@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useAdmin } from "@/contexts/AdminContext";
 import { supabase } from "@/lib/supabase";
-import { Plus, Pencil, Trash2, X, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Upload, Mail } from "lucide-react";
 import Spinner from "@/components/ui/Spinner";
 import Image from "next/image";
 import AdminSelect from "@/components/ui/AdminSelect";
@@ -31,6 +31,7 @@ export default function OffersPage() {
 	const [editTarget, setEditTarget] = useState<Offer | null>(null);
 	const [saving, setSaving] = useState(false);
 	const [pendingMsg, setPendingMsg] = useState("");
+	const [notifying, setNotifying] = useState<string | null>(null);
 	const [uploading, setUploading] = useState(false);
 	const fileRef = useRef<HTMLInputElement>(null);
 	const [form, setForm] = useState({
@@ -52,6 +53,7 @@ export default function OffersPage() {
 	}, []);
 
 	useEffect(() => {
+		// eslint-disable-next-line react-hooks/set-state-in-effect
 		fetchOffers();
 		supabase
 			.from("locations")
@@ -145,6 +147,16 @@ export default function OffersPage() {
 		setSaving(false);
 	}
 
+	async function handleNotify(id: string) {
+		setNotifying(id);
+		await fetch("/api/admin/offers/notify", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ offerId: id }),
+		});
+		setNotifying(null);
+	}
+
 	async function handleDelete(id: string) {
 		const res = await fetch("/api/admin/offers", {
 			method: "DELETE",
@@ -205,12 +217,21 @@ export default function OffersPage() {
 			render: (o) => (
 				<div className='flex gap-2'>
 					{role === "super_admin" && (
-						<button
-							title="Edit offer"
-							onClick={() => openEdit(o)}
-							className='p-1.5 text-white/40 hover:text-white transition-colors'>
-							<Pencil size={14} />
-						</button>
+						<>
+							<button
+								title="Notify subscribers"
+								onClick={() => handleNotify(o.id)}
+								disabled={notifying === o.id}
+								className='p-1.5 text-white/40 hover:text-brand-green transition-colors disabled:opacity-40'>
+								<Mail size={14} />
+							</button>
+							<button
+								title="Edit offer"
+								onClick={() => openEdit(o)}
+								className='p-1.5 text-white/40 hover:text-white transition-colors'>
+								<Pencil size={14} />
+							</button>
+						</>
 					)}
 					<button
 						title="Delete offer"

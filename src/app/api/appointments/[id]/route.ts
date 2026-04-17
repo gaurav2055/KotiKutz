@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getUserEmailAndPrefs, sendEmail, bookingConfirmationEmail, cancellationEmail } from "@/lib/email";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -22,7 +23,7 @@ export async function PATCH(
     // Verify the appointment exists and belongs to this user
     const { data: appointment, error: fetchError } = await supabaseAdmin
       .from("appointments")
-      .select("id, user_id, status, location_id")
+      .select("id, user_id, status, location_id, appointment_date, time_slot, total_price, locations(name), appointment_services(services(name))")
       .eq("id", id)
       .single();
 
@@ -46,6 +47,18 @@ export async function PATCH(
         .eq("id", id);
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      void (async () => {
+        const { email, name, prefs } = await getUserEmailAndPrefs(appointment.user_id);
+        if (!email || !prefs.cancellation) return;
+        const loc = Array.isArray(appointment.locations) ? appointment.locations[0] : appointment.locations;
+        const { subject, html } = cancellationEmail({
+          name, date: appointment.appointment_date, time: appointment.time_slot,
+          location: (loc as { name: string } | null)?.name ?? "",
+        });
+        await sendEmail(email, subject, html);
+      })();
+
       return NextResponse.json({ success: true });
     }
 
@@ -126,6 +139,37 @@ export async function PATCH(
         .eq("id", id);
 
       if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      void (async () => {
+        const { email, name, prefs } = await getUserEmailAndPrefs(appointment.user_id);
+        if (!email) return;
+
+        const oldLoc = Array.isArray(appointment.locations) ? appointment.locations[0] : appointment.locations;
+        const serviceNames = (appointment.appointment_services as unknown as { services: { name: string } | null }[] ?? [])
+          .map((s) => s.services?.name).filter(Boolean).join(", ");
+
+        if (prefs.cancellation) {
+          const { subject, html } = cancellationEmail({
+            name, date: appointment.appointment_date, time: appointment.time_slot,
+            location: (oldLoc as { name: string } | null)?.name ?? "",
+          });
+          await sendEmail(email, subject, html);
+        }
+
+        if (prefs.booking) {
+          let newLocationName = (oldLoc as { name: string } | null)?.name ?? "";
+          if (locationId && locationId !== appointment.location_id) {
+            const { data: newLoc } = await supabaseAdmin.from("locations").select("name").eq("id", targetLocationId).single();
+            newLocationName = (newLoc as { name: string } | null)?.name ?? "";
+          }
+          const { subject, html } = bookingConfirmationEmail({
+            name, date, time: timeSlot, location: newLocationName,
+            services: serviceNames, price: `₹${appointment.total_price}`,
+          });
+          await sendEmail(email, subject, html);
+        }
+      })();
+
       return NextResponse.json({ success: true });
     }
 

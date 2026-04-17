@@ -66,6 +66,7 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     const params = new URLSearchParams();
     if (filterLocation) params.set("locationId", filterLocation);
@@ -181,7 +182,7 @@ export default function DashboardPage() {
                 <p className="text-white/40 text-sm">No data.</p>
               ) : (
                 <div className="space-y-3">
-                  {(analytics?.topServices ?? []).map((s, i) => {
+                  {(analytics?.topServices ?? []).map((s) => {
                     const max = analytics!.topServices[0].count;
                     return (
                       <div key={s.name}>

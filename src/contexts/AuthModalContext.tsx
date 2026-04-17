@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useState } from "react";
 import AuthModal from "@/components/auth/AuthModal";
 
 type AuthModalContextType = { openAuthModal: () => void };
@@ -9,8 +9,9 @@ const AuthModalContext = createContext<AuthModalContextType>({ openAuthModal: ()
 
 export function AuthModalProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const openAuthModal = useCallback(() => setOpen(true), []);
   return (
-    <AuthModalContext.Provider value={{ openAuthModal: () => setOpen(true) }}>
+    <AuthModalContext.Provider value={{ openAuthModal }}>
       {children}
       {open && <AuthModal onClose={() => setOpen(false)} />}
     </AuthModalContext.Provider>

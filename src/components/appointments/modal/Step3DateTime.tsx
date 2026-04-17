@@ -69,7 +69,8 @@ export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext
       .eq("location_id", form.locationId)
       .then(({ data }) => {
         const options: StaffOption[] = [];
-        if (data) data.forEach((s: any) => {
+        type StaffRow = { id: string; profiles: { name: string | null; first_name: string | null; last_name: string | null } | null };
+        if (data) (data as unknown as StaffRow[]).forEach((s) => {
           const p = s.profiles;
           const label = p?.first_name ? `${p.first_name} ${p.last_name ?? ""}`.trim() : p?.name ?? "Stylist";
           options.push({ label, value: s.id });
@@ -90,6 +91,7 @@ export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext
   // Load existing bookings + staff count when date or location changes
   useEffect(() => {
     if (!form.date || !form.locationId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setBookings([]);
       setStaffCount(0);
       return;

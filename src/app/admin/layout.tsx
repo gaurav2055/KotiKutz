@@ -24,6 +24,7 @@ function getTitle(pathname: string): string {
     "/admin/customers":             "Customers",
     "/admin/testimonials":          "Testimonials",
     "/admin/profile":               "My Profile",
+    "/admin/location-settings":     "Location Settings",
   };
   return map[pathname] ?? "Admin";
 }
@@ -64,9 +65,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <AdminProvider role={role} userName={userName}>
       <div className="min-h-screen bg-[#111] text-white flex">
-        <AdminSidebar role={role} open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <AdminSidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className="flex-1 flex flex-col min-w-0">
-          <AdminTopbar title={getTitle(pathname)} role={role} userName={userName} onMenuClick={() => setSidebarOpen(true)} />
+          <AdminTopbar title={getTitle(pathname)} onMenuClick={() => setSidebarOpen(true)} />
           <main className="flex-1 p-6 overflow-auto">
             {children}
           </main>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getUserEmailAndPrefs, sendEmail, bookingConfirmationEmail } from "@/lib/email";
 
 // Server-side client uses secret key — bypasses RLS for trusted writes
 const supabaseAdmin = createClient(
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
     const [{ data: location }, { count: staffCount }] = await Promise.all([
       supabaseAdmin
         .from("locations")
-        .select("max_concurrent_bookings")
+        .select("max_concurrent_bookings, auto_confirm")
         .eq("id", locationId)
         .single(),
       supabaseAdmin
@@ -82,7 +83,7 @@ export async function POST(req: NextRequest) {
         staff_id:         staffId ?? null,
         total_price:      totalPrice,
         notes:            notes ?? null,
-        status:           "pending",
+        status:           location?.auto_confirm ? "confirmed" : "pending",
       })
       .select("id")
       .single();
@@ -100,6 +101,22 @@ export async function POST(req: NextRequest) {
       .insert(serviceRows);
 
     if (servicesError) return NextResponse.json({ error: servicesError.message }, { status: 500 });
+
+    void (async () => {
+      const [{ email, name, prefs }, { data: loc }, { data: svcs }] = await Promise.all([
+        getUserEmailAndPrefs(userId),
+        supabaseAdmin.from("locations").select("name").eq("id", locationId).single(),
+        supabaseAdmin.from("services").select("name").in("id", services),
+      ]);
+      if (!email || !prefs.booking) return;
+      const { subject, html } = bookingConfirmationEmail({
+        name, date, time: timeSlot,
+        location: loc?.name ?? "",
+        services: svcs?.map((s) => s.name).join(", ") ?? "",
+        price: `₹${totalPrice}`,
+      });
+      await sendEmail(email, subject, html);
+    })();
 
     return NextResponse.json({ appointmentId: appointment.id }, { status: 201 });
   } catch {

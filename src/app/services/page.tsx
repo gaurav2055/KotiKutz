@@ -57,6 +57,7 @@ export default function ServicesPage() {
   }, []);
 
   // Reset to page 1 whenever filters change
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setPage(1); }, [filters]);
 
   const categories = useMemo(

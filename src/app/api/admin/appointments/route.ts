@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { getAdminCaller, requireRole } from "@/lib/admin-auth";
+import { getUserEmailAndPrefs, sendEmail, bookingConfirmationEmail, cancellationEmail } from "@/lib/email";
 
 // GET /api/admin/appointments
 // Query params: locationId, date, status, page (default 1), limit (default 20)
@@ -66,7 +67,7 @@ export async function PATCH(request: NextRequest) {
   // Fetch the appointment to verify location scope
   const { data: appt, error: fetchErr } = await supabaseAdmin
     .from("appointments")
-    .select("location_id, status")
+    .select("location_id, status, user_id, appointment_date, time_slot, total_price, locations(name), appointment_services(services(name))")
     .eq("id", id)
     .single();
 
@@ -113,6 +114,21 @@ export async function PATCH(request: NextRequest) {
       .update({ status: "confirmed" })
       .eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    void (async () => {
+      const { email, name, prefs } = await getUserEmailAndPrefs(appt.user_id);
+      if (!email || !prefs.booking) return;
+      const loc = Array.isArray(appt.locations) ? appt.locations[0] : appt.locations;
+      const serviceNames = (appt.appointment_services as unknown as { services: { name: string } | null }[] ?? [])
+        .map((s) => s.services?.name).filter(Boolean).join(", ");
+      const { subject, html } = bookingConfirmationEmail({
+        name, date: appt.appointment_date, time: appt.time_slot,
+        location: (loc as { name: string } | null)?.name ?? "",
+        services: serviceNames, price: `₹${appt.total_price}`,
+      });
+      await sendEmail(email, subject, html);
+    })();
+
     return NextResponse.json({ success: true });
   }
 
@@ -125,6 +141,18 @@ export async function PATCH(request: NextRequest) {
       .update({ status: "cancelled", cancellation_requested: false })
       .eq("id", id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    void (async () => {
+      const { email, name, prefs } = await getUserEmailAndPrefs(appt.user_id);
+      if (!email || !prefs.cancellation) return;
+      const loc = Array.isArray(appt.locations) ? appt.locations[0] : appt.locations;
+      const { subject, html } = cancellationEmail({
+        name, date: appt.appointment_date, time: appt.time_slot,
+        location: (loc as { name: string } | null)?.name ?? "",
+      });
+      await sendEmail(email, subject, html);
+    })();
+
     return NextResponse.json({ success: true });
   }
 

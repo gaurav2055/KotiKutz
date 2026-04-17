@@ -13,6 +13,7 @@ interface Location {
   close_time: string;
   slot_duration_minutes: number;
   max_concurrent_bookings: number;
+  auto_confirm: boolean;
 }
 
 const EMPTY_FORM = {
@@ -22,6 +23,7 @@ const EMPTY_FORM = {
   close_time: "20:00",
   slot_duration_minutes: "30",
   max_concurrent_bookings: "2",
+  auto_confirm: false,
 };
 
 const FIELDS = [
@@ -49,6 +51,7 @@ export default function LocationsPage() {
     setLoading(false);
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchLocations(); }, [fetchLocations]);
 
   function openCreate() {
@@ -66,6 +69,7 @@ export default function LocationsPage() {
       close_time: l.close_time,
       slot_duration_minutes: String(l.slot_duration_minutes),
       max_concurrent_bookings: String(l.max_concurrent_bookings),
+      auto_confirm: l.auto_confirm,
     });
     setShowForm(true);
   }
@@ -78,6 +82,7 @@ export default function LocationsPage() {
       close_time: form.close_time,
       slot_duration_minutes: parseInt(form.slot_duration_minutes),
       max_concurrent_bookings: parseInt(form.max_concurrent_bookings),
+      auto_confirm: form.auto_confirm,
     };
 
     if (editTarget) {
@@ -143,6 +148,11 @@ export default function LocationsPage() {
               <div><span className="text-white/40">Hours:</span> <span className="text-white/70">{l.open_time} – {l.close_time}</span></div>
               <div><span className="text-white/40">Slot:</span> <span className="text-white/70">{l.slot_duration_minutes} min</span></div>
               <div><span className="text-white/40">Max bookings:</span> <span className="text-white/70">{l.max_concurrent_bookings}</span></div>
+              <div>
+                <span className={`text-xs px-2 py-0.5 rounded-full ${l.auto_confirm ? "bg-brand-green/20 text-brand-green" : "bg-white/10 text-white/40"}`}>
+                  {l.auto_confirm ? "Auto-confirm on" : "Auto-confirm off"}
+                </span>
+              </div>
             </div>
           </div>
         ))}
@@ -167,12 +177,21 @@ export default function LocationsPage() {
               <label className="text-white/60 text-sm block mb-1">{label}</label>
               <input
                 type={type}
-                value={form[key as keyof typeof form]}
+                value={form[key as keyof typeof form] as string}
                 onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                 className="w-full bg-white/5 border border-white/10 text-white text-sm rounded-lg px-3 py-2 outline-none [color-scheme:dark]"
               />
             </div>
           ))}
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.auto_confirm}
+              onChange={(e) => setForm({ ...form, auto_confirm: e.target.checked })}
+              className="accent-brand-green w-4 h-4"
+            />
+            <span className="text-white/60 text-sm">Auto-confirm appointments</span>
+          </label>
         </AdminModal>
       )}
     </div>

@@ -19,8 +19,8 @@ export async function GET() {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Flatten nested profile and location fields
-  const flattened = (data ?? []).map((s: any) => {
+  type StaffRow = { id: string; bio: string | null; specialization: string | null; location_id: string | null; profiles: { email: string | null; role: string | null; first_name: string | null; last_name: string | null; name: string | null; avatar_url: string | null } | null; locations: { name: string | null } | null };
+  const flattened = (data as unknown as StaffRow[]).map((s) => {
     const p = s.profiles ?? {};
     const displayName = p.first_name
       ? `${p.first_name} ${p.last_name ?? ""}`.trim()

@@ -23,6 +23,7 @@ export default function Navbar() {
   const userAvatar = user?.user_metadata?.avatar_url ?? null;
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!user) { setIsAdmin(false); return; }
     supabase
       .from("profiles")

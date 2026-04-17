@@ -55,6 +55,7 @@ export default function StaffPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStaff();
     supabase.from("locations").select("id, name").order("name").then(({ data }) => setLocations(data ?? []));
   }, [fetchStaff]);

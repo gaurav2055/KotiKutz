@@ -37,12 +37,13 @@ export default function RecentActivity({ userId }: Props) {
       .limit(3)
       .then(({ data }) => {
         if (!data) return;
+        type ApptRow = { id: string; appointment_date: string; total_price: number | null; locations: { name: string } | null; staff: { profiles: { name: string | null; first_name: string | null; last_name: string | null } | null } | null; appointment_services: { services: { name: string | null } | null }[] | null };
         setActivities(
-          data.map((a: any) => ({
+          (data as unknown as ApptRow[]).map((a) => ({
             id: a.id,
             service:
               a.appointment_services
-                ?.map((as: any) => as.services?.name)
+                ?.map((as) => as.services?.name)
                 .filter(Boolean)
                 .join(" + ") || "Service",
             location: a.locations?.name ?? "—",

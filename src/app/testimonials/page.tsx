@@ -35,7 +35,8 @@ export default function TestimonialsPage() {
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         if (data) {
-          setTestimonials(data.map((t: any) => {
+          type TestimonialRow = { id: string; content: string; rating: number; reviewer_name: string | null; location_id: string | null; profiles: { name: string | null; first_name: string | null; last_name: string | null } | null; locations: { name: string } | { name: string }[] | null };
+          setTestimonials((data as unknown as TestimonialRow[]).map((t) => {
             const profile = t.profiles;
             const displayName = profile
               ? (profile.first_name && profile.last_name

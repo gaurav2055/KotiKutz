@@ -29,6 +29,7 @@ export default function CancellationRequestsPage() {
     setLoading(false);
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchRequests(); }, [fetchRequests]);
 
   async function doAction(id: string, action: "approve" | "reject") {

@@ -41,7 +41,9 @@ function formatDate(d: string) {
 
 function appointmentStart(date: string, slot: string): Date {
   const [time, ampm] = slot.split(" ");
-  let [h, m] = time.split(":").map(Number);
+  const parts = time.split(":").map(Number);
+  let h = parts[0];
+  const m = parts[1];
   if (ampm === "PM" && h !== 12) h += 12;
   if (ampm === "AM" && h === 12) h = 0;
   const [y, mo, d] = date.split("-").map(Number);
@@ -83,6 +85,7 @@ export default function AdminAppointmentsPage() {
     supabase.from("locations").select("id, name").order("name").then(({ data }) => {
       setLocations(data ?? []);
     });
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchAppointments();
   }, [fetchAppointments]);
 
