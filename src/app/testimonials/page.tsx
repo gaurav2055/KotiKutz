@@ -14,7 +14,7 @@ type Testimonial = {
   quote: string;
   name: string;
   location: string;
-  location_id: string;
+  location_id: string | null;
   rating: number;
 };
 

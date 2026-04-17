@@ -21,22 +21,22 @@ export async function GET() {
 
   type StaffRow = { id: string; bio: string | null; specialization: string | null; location_id: string | null; profiles: { email: string | null; role: string | null; first_name: string | null; last_name: string | null; name: string | null; avatar_url: string | null } | null; locations: { name: string | null } | null };
   const flattened = (data as unknown as StaffRow[]).map((s) => {
-    const p = s.profiles ?? {};
-    const displayName = p.first_name
+    const p = s.profiles;
+    const displayName = p?.first_name
       ? `${p.first_name} ${p.last_name ?? ""}`.trim()
-      : p.name ?? null;
+      : p?.name ?? null;
     return {
       id:             s.id,
       name:           displayName,
       bio:            s.bio,
       specialization: s.specialization,
-      avatar_url:     p.avatar_url ?? null,
+      avatar_url:     p?.avatar_url ?? null,
       location_id:    s.location_id,
       location_name:  s.locations?.name ?? null,
-      email:          p.email ?? null,
-      role:           p.role ?? "employee",
-      first_name:     p.first_name ?? null,
-      last_name:      p.last_name ?? null,
+      email:          p?.email ?? null,
+      role:           p?.role ?? "employee",
+      first_name:     p?.first_name ?? null,
+      last_name:      p?.last_name ?? null,
     };
   });
 
