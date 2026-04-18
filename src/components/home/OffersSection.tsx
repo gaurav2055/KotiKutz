@@ -2,11 +2,9 @@
 
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import Skeleton from "@/components/ui/Skeleton";
+import { useState } from "react";
 
-type Offer = {
+export type Offer = {
   id: string;
   title: string;
   description: string | null;
@@ -14,41 +12,11 @@ type Offer = {
   image_url: string | null;
 };
 
-function OfferSkeleton() {
-  return (
-    <section className="bg-offers-bg py-8 md:py-12">
-      <div className="max-w-[1236px] mx-auto bg-white rounded-[20px] md:rounded-[30px] flex flex-col md:flex-row items-center gap-6 md:gap-12 px-6 md:px-10 py-8 shadow-md">
-        <Skeleton className="w-[220px] md:w-[378px] h-[300px] md:h-[513px] mx-auto rounded-none shrink-0" />
-        <div className="flex-1 w-full space-y-4">
-          <Skeleton className="h-8 w-2/3 mx-auto" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-5/6" />
-          <Skeleton className="h-4 w-full" />
-          <Skeleton className="h-4 w-4/5" />
-        </div>
-      </div>
-    </section>
-  );
-}
+type Props = { offers: Offer[] };
 
-export default function OffersSection() {
-  const [offers,  setOffers]  = useState<Offer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [index,   setIndex]   = useState(0);
+export default function OffersSection({ offers }: Props) {
+  const [index, setIndex] = useState(0);
 
-  useEffect(() => {
-    supabase
-      .from("offers")
-      .select("id, title, description, bullet_points, image_url")
-      .eq("active", true)
-      .order("sort_order")
-      .then(({ data }) => {
-        if (data) setOffers(data);
-        setLoading(false);
-      });
-  }, []);
-
-  if (loading) return <OfferSkeleton />;
   if (offers.length === 0) return null;
 
   const offer = offers[index];

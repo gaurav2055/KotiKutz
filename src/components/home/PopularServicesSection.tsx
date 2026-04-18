@@ -1,9 +1,12 @@
 import Image from "next/image";
 import ServicesSlider from "@/components/ServicesSlider";
+import type { SliderService } from "@/components/ServicesSlider";
 
 const DECORATIVE = "/images/services-decorative.png";
 
-export default function PopularServicesSection() {
+type Props = { services: SliderService[] };
+
+export default function PopularServicesSection({ services }: Props) {
   return (
     <section className="bg-services-bg py-12">
 
@@ -16,8 +19,7 @@ export default function PopularServicesSection() {
         <Image src={DECORATIVE} alt="" width={80} height={80} className="-scale-y-100 mix-blend-multiply" />
       </div>
 
-      {/* ServicesSlider is a client component — it handles its own state for prev/next */}
-      <ServicesSlider />
+      <ServicesSlider services={services} />
 
     </section>
   );

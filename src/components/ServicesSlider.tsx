@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import ServiceCard from "@/components/ServiceCard";
-import { supabase } from "@/lib/supabase";
 
-type Service = {
+export type SliderService = {
   id: string;
   name: string;
   price: number;
@@ -13,42 +12,19 @@ type Service = {
   image_url: string | null;
 };
 
-function SliderSkeleton() {
-  return (
-    <div className="flex gap-6 md:gap-14 px-4 md:px-20 overflow-hidden">
-      {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="w-[80vw] sm:w-[45vw] lg:w-[410px] h-[449px] shrink-0 rounded-[15px] bg-gray-300 animate-pulse" />
-      ))}
-    </div>
-  );
-}
+type Props = { services: SliderService[] };
 
-export default function ServicesSlider() {
-  const [services, setServices] = useState<Service[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function ServicesSlider({ services }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    supabase
-      .from("services")
-      .select("id, name, price, description, image_url")
-      .limit(10)
-      .then(({ data }) => {
-        if (data) setServices(data);
-        setLoading(false);
-      });
-  }, []);
 
   function scrollBy(dir: 1 | -1) {
     const el = scrollRef.current;
     if (!el) return;
     const card = el.querySelector<HTMLElement>("[data-card]");
     if (!card) return;
-    const gap = window.innerWidth >= 768 ? 56 : 24; // gap-14 on md, gap-6 on mobile
+    const gap = window.innerWidth >= 768 ? 56 : 24;
     el.scrollBy({ left: dir * (card.offsetWidth + gap), behavior: "smooth" });
   }
-
-  if (loading) return <SliderSkeleton />;
 
   return (
     <div className="relative">

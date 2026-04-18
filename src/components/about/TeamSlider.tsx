@@ -1,27 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import TeamMemberCard from "@/components/about/TeamMemberCard";
-import { supabase } from "@/lib/supabase";
 
-type StaffMember = {
+export type StaffMember = {
   id: string;
   specialization: string | null;
   profiles: { name: string | null; first_name: string | null; last_name: string | null; avatar_url: string | null } | null;
   locations: { name: string }[] | null;
 };
 
-export default function TeamSlider() {
-  const [members, setMembers] = useState<StaffMember[]>([]);
-  const scrollRef = useRef<HTMLDivElement>(null);
+type Props = { members: StaffMember[] };
 
-  useEffect(() => {
-    supabase
-      .from("staff")
-      .select("id, specialization, profiles!staff_id_fkey(name, first_name, last_name, avatar_url), locations(name)")
-      .then(({ data }) => { if (data) setMembers(data as unknown as StaffMember[]); });
-  }, []);
+export default function TeamSlider({ members }: Props) {
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   function scrollBy(dir: 1 | -1) {
     const el = scrollRef.current;
@@ -70,7 +63,7 @@ export default function TeamSlider() {
           onClick={() => scrollBy(1)}
           className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-10 items-center justify-center w-10 h-10 rounded-full bg-black/10 hover:bg-black/20 transition-colors"
         >
-          <ChevronRight className="w-5 h-5 text-black" />
+          <ChevronRight className="w-5 h-5 text-white" />
         </button>
       </div>
     </section>

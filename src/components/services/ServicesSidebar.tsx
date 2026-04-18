@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Dropdown from "@/components/ui/Dropdown";
 import SearchInput from "@/components/ui/SearchInput";
 import CategoryList from "@/components/services/CategoryList";
-import { supabase } from "@/lib/supabase";
 import type { FiltersState } from "@/app/services/page";
 
 const GENDER_OPTIONS = [
@@ -16,18 +14,11 @@ const GENDER_OPTIONS = [
 type Props = {
   filters: FiltersState;
   categories: string[];
+  locationOptions: { label: string; value: string }[];
   onChange: (filters: FiltersState) => void;
 };
 
-export default function ServicesSidebar({ filters, categories, onChange }: Props) {
-  const [locationOptions, setLocationOptions] = useState<{ label: string; value: string }[]>([]);
-
-  useEffect(() => {
-    supabase.from("locations").select("id, name").order("name").then(({ data }) => {
-      if (data) setLocationOptions(data.map((l) => ({ label: l.name, value: l.id })));
-    });
-  }, []);
-
+export default function ServicesSidebar({ filters, categories, locationOptions, onChange }: Props) {
   function toggleCategory(cat: string) {
     const next = filters.categories.includes(cat)
       ? filters.categories.filter((c) => c !== cat)
