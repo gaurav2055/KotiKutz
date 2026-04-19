@@ -37,14 +37,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const pathname = usePathname();
 
+  const userId = user?.id;
+
   useEffect(() => {
     if (loading) return;
-    if (!user) { router.replace("/"); return; }
+    if (!userId) { router.replace("/"); return; }
 
     supabase
       .from("profiles")
       .select("role, name, first_name")
-      .eq("id", user.id)
+      .eq("id", userId)
       .single()
       .then(({ data }) => {
         const r = data?.role;
@@ -52,7 +54,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         setRole(r as AdminRole);
         setUserName(data?.first_name || data?.name || "");
       });
-  }, [user, loading, router]);
+  }, [userId, loading, router]);
 
   if (loading || !role) {
     return (
