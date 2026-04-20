@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 import ServicesClient from "./ServicesClient";
 import { supabaseServer } from "@/lib/supabase-server";
 

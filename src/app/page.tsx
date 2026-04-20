@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 import SiteHero            from "@/components/SiteHero";
 import OffersSection       from "@/components/home/OffersSection";
 import LocationsSection    from "@/components/home/LocationsSection";

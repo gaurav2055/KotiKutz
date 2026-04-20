@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 import TestimonialsClient from "./TestimonialsClient";
 import { supabaseServer } from "@/lib/supabase-server";
 

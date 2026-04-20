@@ -1,3 +1,5 @@
+export const revalidate = 3600;
+
 import AboutHero  from "@/components/about/AboutHero";
 import OurStory   from "@/components/about/OurStory";
 import TeamSlider from "@/components/about/TeamSlider";
