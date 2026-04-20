@@ -1,4 +1,4 @@
-export const revalidate = 3600;
+export const dynamic = "force-dynamic";
 
 import TestimonialsClient from "./TestimonialsClient";
 import { supabaseServer } from "@/lib/supabase-server";
