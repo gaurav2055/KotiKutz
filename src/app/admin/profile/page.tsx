@@ -109,14 +109,18 @@ export default function AdminProfilePage() {
       location_id: form.location_id || null,
     };
 
-    if (staffRecord) {
-      const { error: updateError } = await supabase.from("staff").update(payload).eq("id", staffRecord.id);
-      if (updateError) { setError(updateError.message); setSaving(false); return; }
-    } else {
-      const { data, error: insertError } = await supabase.from("staff").insert({ id: user.id, ...payload }).select().single();
-      if (insertError) { setError(insertError.message); setSaving(false); return; }
-      if (data) setStaffRecord(data);
+    const res = await fetch("/api/admin/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const d = await res.json();
+      setError(d.error ?? "Save failed.");
+      setSaving(false);
+      return;
     }
+    if (!staffRecord) setStaffRecord({ id: user.id, ...payload });
     setSaving(false);
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);

@@ -35,6 +35,7 @@ export default function Step4Confirm({ form, userId, onBack, onCancel, onConfirm
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         userId,
+        email:       form.email,
         locationId:  form.locationId,
         date:        form.date,
         timeSlot:    form.timeSlot,

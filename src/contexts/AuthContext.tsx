@@ -40,10 +40,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     // Covers token refresh, login, logout, and TOKEN_REFRESHED events.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
+      if (event === "SIGNED_IN" && session?.access_token) {
+        fetch("/api/appointments/claim", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        }).catch(() => {});
+      }
     });
 
     return () => subscription.unsubscribe();
