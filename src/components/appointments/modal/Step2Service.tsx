@@ -69,7 +69,7 @@ export default function Step2Service({ selectedServices, onUpdate, onBack, onCan
 
   return (
     <div>
-      <div className="flex gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
 
         {/* Service list */}
         <div className="flex-1 max-h-72 overflow-y-auto pr-1 space-y-3 scrollbar-thin">
@@ -129,7 +129,7 @@ export default function Step2Service({ selectedServices, onUpdate, onBack, onCan
         </div>
 
         {/* Cart */}
-        <div className="w-44 shrink-0 border border-[#2a2a2a] rounded-xl p-3 flex flex-col">
+        <div className="w-full sm:w-44 sm:shrink-0 border border-[#2a2a2a] rounded-xl p-3 flex flex-col">
           <p className="text-xs font-bold text-gray-400 tracking-widest mb-3">CART</p>
           {selectedServices.length === 0 ? (
             <p className="text-xs text-gray-600 italic">No services added</p>

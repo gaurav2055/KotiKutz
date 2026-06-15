@@ -54,6 +54,7 @@ type Props = {
 
 export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext }: Props) {
   const [staffOptions,      setStaffOptions]      = useState<StaffOption[]>([]);
+  const [staffLoaded,       setStaffLoaded]       = useState(false);
   const [locationSettings,  setLocationSettings]  = useState<LocationSettings | null>(null);
   const [bookings,          setBookings]           = useState<Booking[]>([]);
   const [staffCount,        setStaffCount]         = useState(0);
@@ -62,6 +63,8 @@ export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext
   // Load staff + location settings when location changes
   useEffect(() => {
     if (!form.locationId) return;
+
+    setStaffLoaded(false);
 
     supabase
       .from("staff")
@@ -76,6 +79,7 @@ export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext
           options.push({ label, value: s.id });
         });
         setStaffOptions(options);
+        setStaffLoaded(true);
       });
 
     supabase
@@ -139,7 +143,8 @@ export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext
   }
 
   const today   = new Date().toISOString().split("T")[0];
-  const canNext = form.date !== "" && form.timeSlot !== "";
+  const noStaffAvailable = staffLoaded && staffOptions.length === 0;
+  const canNext = !noStaffAvailable && form.date !== "" && form.timeSlot !== "";
 
   function handleDateChange(date: string) {
     if (form.timeSlot && isSlotPast(form.timeSlot, date)) onUpdate("timeSlot", "");
@@ -159,6 +164,12 @@ export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext
     <div>
       <div className="space-y-5 mb-6">
 
+        {noStaffAvailable && (
+          <div className="rounded-xl border border-[#2a1010] bg-[#1a0a0a] px-4 py-3 text-sm text-red-400">
+            No stylists are currently available at this location. Please go back and choose a different location to book an appointment.
+          </div>
+        )}
+
         {/* Date + Stylist row */}
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -167,8 +178,9 @@ export default function Step3DateTime({ form, onUpdate, onBack, onCancel, onNext
               type="date"
               value={form.date}
               min={today}
+              disabled={noStaffAvailable}
               onChange={(e) => handleDateChange(e.target.value)}
-              className="w-full h-11 bg-[#1c1c1c] border border-[#333] rounded-xl px-4 text-sm text-white outline-none focus:border-brand-green transition-colors [color-scheme:dark]"
+              className="w-full h-11 bg-[#1c1c1c] border border-[#333] rounded-xl px-4 text-sm text-white outline-none focus:border-brand-green transition-colors [color-scheme:dark] disabled:opacity-40 disabled:cursor-not-allowed"
             />
           </div>
           <div>
